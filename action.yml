@@ -1,0 +1,105 @@
+name: 'Ratchet'
+description: 'Run ratchet CLI tool in your GitHub Actions workflow'
+author: 'Tiernacity'
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
+inputs:
+  version:
+    description: 'Version of ratchet to use (e.g., v1.0.0)'
+    required: false
+    default: 'latest'
+  config:
+    description: 'Path to configuration file'
+    required: false
+    default: ''
+  verbose:
+    description: 'Enable verbose output'
+    required: false
+    default: 'false'
+  command:
+    description: 'Ratchet command to run (default: run)'
+    required: false
+    default: 'run'
+  args:
+    description: 'Additional arguments to pass to ratchet'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Determine version
+      id: version
+      shell: bash
+      run: |
+        if [[ "${{ inputs.version }}" == "latest" ]]; then
+          VERSION=$(curl -s https://api.github.com/repos/tiernacity/ratchet/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        else
+          VERSION="${{ inputs.version }}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+    
+    - name: Download ratchet
+      shell: bash
+      run: |
+        # Determine OS and architecture
+        OS=$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+        
+        # Map architecture names
+        case $ARCH in
+          x86_64)
+            ARCH="amd64"
+            ;;
+          aarch64|arm64)
+            ARCH="arm64"
+            ;;
+        esac
+        
+        # Set binary name
+        BINARY_NAME="ratchet-${OS}-${ARCH}"
+        if [[ "$OS" == "windows" ]]; then
+          BINARY_NAME="${BINARY_NAME}.exe"
+        fi
+        
+        # Download binary
+        URL="https://github.com/tiernacity/ratchet/releases/download/${{ steps.version.outputs.version }}/${BINARY_NAME}"
+        echo "Downloading ratchet from $URL"
+        curl -LO "$URL"
+        
+        # Make executable
+        chmod +x "${BINARY_NAME}"
+        
+        # Move to standard location
+        mkdir -p "$HOME/.local/bin"
+        mv "${BINARY_NAME}" "$HOME/.local/bin/ratchet"
+        
+        # Add to PATH
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+    
+    - name: Run ratchet
+      shell: bash
+      run: |
+        # Build command
+        CMD="ratchet ${{ inputs.command }}"
+        
+        # Add config flag if provided
+        if [[ -n "${{ inputs.config }}" ]]; then
+          CMD="$CMD --config ${{ inputs.config }}"
+        fi
+        
+        # Add verbose flag if enabled
+        if [[ "${{ inputs.verbose }}" == "true" ]]; then
+          CMD="$CMD --verbose"
+        fi
+        
+        # Add additional arguments
+        if [[ -n "${{ inputs.args }}" ]]; then
+          CMD="$CMD ${{ inputs.args }}"
+        fi
+        
+        # Execute
+        echo "Running: $CMD"
+        $CMD

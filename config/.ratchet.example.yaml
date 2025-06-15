@@ -1,0 +1,28 @@
+# Example Ratchet configuration file
+# Copy this to ~/.ratchet.yaml or specify with --config flag
+
+# Verbose output
+verbose: false
+
+# Main configuration section
+# TODO: Add your specific configuration options here
+# Examples:
+# 
+# server:
+#   host: localhost
+#   port: 8080
+#   timeout: 30s
+#
+# database:
+#   driver: postgres
+#   connection: "postgres://user:pass@localhost/db"
+#
+# features:
+#   - name: feature1
+#     enabled: true
+#   - name: feature2
+#     enabled: false
+#
+# limits:
+#   max_connections: 100
+#   max_requests_per_second: 1000
