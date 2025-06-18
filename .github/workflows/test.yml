@@ -125,8 +125,8 @@ jobs:
     - name: Test binary
       run: |
         if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          ./bin/${{ matrix.binary_name }} version
+          ./bin/${{ matrix.binary_name }} --version
         else
-          ./bin/${{ matrix.binary_name }} version
+          ./bin/${{ matrix.binary_name }} --version
         fi
       shell: bash
