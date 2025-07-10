@@ -37,7 +37,6 @@ func (o *orchestrator) Run(ctx context.Context, cfg *config.Config) error {
 		return errors.WrapGitError("validation", fmt.Errorf("not in a git repository"))
 	}
 
-
 	// If no comparison operator is specified, just run the metric command in current directory
 	if cfg.Operator == config.OpUnknown {
 		return o.runNoComparison(ctx, cfg)
@@ -46,7 +45,7 @@ func (o *orchestrator) Run(ctx context.Context, cfg *config.Config) error {
 	// Resolve base branch
 	baseBranch, err := o.git.ResolveBranch(cfg.BaseBranch)
 	if err != nil {
-		return errors.WrapGitError("branch resolution", 
+		return errors.WrapGitError("branch resolution",
 			fmt.Errorf("branch '%s' not found", cfg.BaseBranch))
 	}
 
@@ -121,7 +120,7 @@ func (o *orchestrator) runMetricSequence(ctx context.Context, cfg *config.Config
 	if cfg.PreCmd != "" {
 		o.reporter.UpdateBranch(branchName, "pre", false)
 		if _, err := o.executor.Execute(ctx, dir, cfg.PreCmd); err != nil {
-			return 0, errors.WrapCommandError(cfg.PreCmd, 
+			return 0, errors.WrapCommandError(cfg.PreCmd,
 				fmt.Errorf("pre-command failed in %s: %w", branchName, err))
 		}
 		o.reporter.UpdateBranch(branchName, "pre", true)

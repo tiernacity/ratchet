@@ -131,9 +131,9 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "valid config",
 			config: Config{
-				MetricCmd:   "echo 42",
-				BaseBranch:  "main",
-				Operator:    OpGreaterThan,
+				MetricCmd:  "echo 42",
+				BaseBranch: "main",
+				Operator:   OpGreaterThan,
 			},
 		},
 		{

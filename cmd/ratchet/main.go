@@ -11,8 +11,11 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tiernacity/ratchet/internal/config"
 	"github.com/tiernacity/ratchet/internal/errors"
+	"github.com/tiernacity/ratchet/internal/executor"
+	"github.com/tiernacity/ratchet/internal/git"
 	"github.com/tiernacity/ratchet/internal/orchestrator"
 	"github.com/tiernacity/ratchet/internal/parser"
+	"github.com/tiernacity/ratchet/internal/progress"
 )
 
 var (
@@ -36,13 +39,13 @@ Examples:
 
 // Comparison operator flags
 var (
-	gtBranch  string
-	geBranch  string
-	eqBranch  string
-	leBranch  string
-	ltBranch  string
-	preCmd    string
-	postCmd   string
+	gtBranch string
+	geBranch string
+	eqBranch string
+	leBranch string
+	ltBranch string
+	preCmd   string
+	postCmd  string
 )
 
 func init() {
@@ -80,16 +83,15 @@ func runRatchet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Create dependencies (placeholder implementations for now)
-	// TODO: Replace with real implementations
-	git := &mockGit{}
-	executor := &mockExecutor{}
-	progressReporter := &mockProgress{}
+	// Create dependencies
+	gitOps := git.New()
+	cmdExecutor := executor.New()
+	progressReporter := progress.NewConsole()
 	metricParser := parser.New()
 
 	// Create orchestrator
-	tempDir := os.TempDir()
-	orch := orchestrator.New(git, executor, metricParser, progressReporter, tempDir)
+	tempDir := getTempDir()
+	orch := orchestrator.New(gitOps, cmdExecutor, metricParser, progressReporter, tempDir)
 
 	// Run the orchestrator
 	return orch.Run(ctx, cfg)
@@ -174,6 +176,14 @@ func buildConfig(metricCmd string) (*config.Config, error) {
 	return &cfg, nil
 }
 
+// getTempDir returns the appropriate temporary directory, preferring RUNNER_TEMP in GitHub Actions
+func getTempDir() string {
+	if runnerTemp := os.Getenv("RUNNER_TEMP"); runnerTemp != "" {
+		return runnerTemp
+	}
+	return os.TempDir()
+}
+
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		// Print error to stderr
@@ -182,67 +192,4 @@ func main() {
 		// Exit with appropriate code
 		os.Exit(errors.GetExitCode(err))
 	}
-}
-
-// Placeholder implementations - these will be replaced with real implementations later
-type mockGit struct{}
-
-func (g *mockGit) IsGitRepository() error {
-	return nil
-}
-
-func (g *mockGit) CreateWorktree(path, branch string) error {
-	return nil
-}
-
-func (g *mockGit) RemoveWorktree(path string) error {
-	return nil
-}
-
-func (g *mockGit) ResolveBranch(branch string) (string, error) {
-	return "origin/" + branch, nil
-}
-
-
-type mockExecutor struct{}
-
-func (e *mockExecutor) Execute(ctx context.Context, dir, command string) (string, error) {
-	// For now, just return a mock value
-	return "42", nil
-}
-
-type mockProgress struct{}
-
-func (p *mockProgress) Start(baseRef, headRef string, verbose bool) {
-	fmt.Printf("Comparing %s to %s\n", headRef, baseRef)
-}
-
-func (p *mockProgress) UpdateBranch(branch string, phase string, completed bool) {
-	status := "[ ]"
-	if completed {
-		status = "[x]"
-	}
-	fmt.Printf("  %s: %s %s\n", branch, phase, status)
-}
-
-func (p *mockProgress) Success(current, base float64, operator, branch string) {
-	fmt.Printf("HEAD metric (%.4g) is %s %s (%.4g)\n", current, operator, branch, base)
-	fmt.Println("Succeeded")
-}
-
-func (p *mockProgress) Failure(current, base float64, operator, branch string) {
-	fmt.Fprintf(os.Stderr, "HEAD metric (%.4g) is NOT %s %s (%.4g)\n", current, operator, branch, base)
-	fmt.Fprintf(os.Stderr, "Failed\n")
-}
-
-func (p *mockProgress) Error(message string) {
-	fmt.Fprintf(os.Stderr, "Error: %s\n", message)
-}
-
-func (p *mockProgress) NoComparison(value float64) {
-	fmt.Printf("%.4g\n", value)
-}
-
-func (p *mockProgress) Info(message string) {
-	fmt.Fprintf(os.Stderr, "%s\n", message)
 }

@@ -36,7 +36,6 @@ func (m *mockGitOperations) ResolveBranch(branch string) (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-
 type mockCommandExecutor struct {
 	mock.Mock
 }
@@ -154,7 +153,7 @@ func TestOrchestrator_Run_MetricTestFailure(t *testing.T) {
 	parser.On("Parse", "50").Return(50.0, nil)
 	reporter.On("UpdateBranch", "origin/main", "metric", true)
 
-	// HEAD branch execution  
+	// HEAD branch execution
 	reporter.On("UpdateBranch", "HEAD", "metric", false)
 	executor.On("Execute", mock.Anything, ".", "echo 42").Return("42", nil)
 	parser.On("Parse", "42").Return(42.0, nil)

@@ -139,7 +139,7 @@ func TestParser_Parse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := p.Parse(tt.output)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errType == "parse" {
@@ -147,7 +147,7 @@ func TestParser_Parse(t *testing.T) {
 				}
 				return
 			}
-			
+
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})

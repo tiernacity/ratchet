@@ -39,7 +39,7 @@ func (p *parser) Parse(output string) (float64, error) {
 	case 1:
 		return numbers[0], nil
 	default:
-		return 0, errors.WrapParseError(output, 
+		return 0, errors.WrapParseError(output,
 			fmt.Errorf("multiple numeric values found (%v); output must contain exactly one number", numbers))
 	}
 }
@@ -49,15 +49,15 @@ func extractNumbers(input string) []float64 {
 	// Regex to match integers and floating-point numbers (including scientific notation)
 	// Matches: 42, -42, 3.14, -3.14, 1e10, -1.5e-10, 1E+5, etc.
 	numberRegex := regexp.MustCompile(`-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?`)
-	
+
 	matches := numberRegex.FindAllString(input, -1)
 	var numbers []float64
-	
+
 	for _, match := range matches {
 		if num, err := strconv.ParseFloat(match, 64); err == nil {
 			numbers = append(numbers, num)
 		}
 	}
-	
+
 	return numbers
 }
