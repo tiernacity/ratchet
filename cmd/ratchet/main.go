@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -25,54 +26,86 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "ratchet [flags] <metric command>",
-	Short: "A software ratchet that enforces continuous improvement",
-	Long: `Ratchet is a CLI tool that ensures metrics move in the right direction.
-It compares command output metrics between Git branches to enforce improvements.
+	Short: "Implement a software ratchet to enforce continuous improvement",
+	Long: `Ratchet is a CLI tool to test that a metric has changed as you require, in a git repo.
+Supply a command that outputs your metric, and ratchet will compare the metric against a base branch.`,
 
-Examples:
-  ratchet --gt main "grep -c TODO *.go"          # TODO count must decrease
-  ratchet --le origin/main "npm test | grep failed"  # Failures must not increase
-  ratchet "echo 42"                              # Just output the metric`,
-	Args: cobra.ExactArgs(1),
+	Args: func(cmd *cobra.Command, args []string) error {
+		if showVersion {
+			return nil // Skip arg validation for version
+		}
+		return cobra.ExactArgs(1)(cmd, args)
+	},
 	RunE: runRatchet,
 }
 
 // Comparison operator flags
 var (
-	gtBranch string
-	geBranch string
-	eqBranch string
-	leBranch string
-	ltBranch string
-	preCmd   string
-	postCmd  string
+	gtBranch    string
+	geBranch    string
+	eqBranch    string
+	leBranch    string
+	ltBranch    string
+	preCmd      string
+	postCmd     string
+	configStr   string
+	showVersion bool
 )
 
 func init() {
-	// Global flags
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config-file", "", "config file path")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
+	// Set custom help template to match README format
+	rootCmd.SetHelpTemplate(`{{.Short}}
 
-	// Comparison operators (mutually exclusive)
-	rootCmd.Flags().StringVar(&gtBranch, "gt", "", "test that HEAD metric > base branch metric")
-	rootCmd.Flags().StringVar(&gtBranch, "greater-than", "", "test that HEAD metric > base branch metric")
-	rootCmd.Flags().StringVar(&geBranch, "ge", "", "test that HEAD metric >= base branch metric")
-	rootCmd.Flags().StringVar(&geBranch, "greater-equal", "", "test that HEAD metric >= base branch metric")
-	rootCmd.Flags().StringVar(&eqBranch, "eq", "", "test that HEAD metric == base branch metric")
-	rootCmd.Flags().StringVar(&eqBranch, "equal-to", "", "test that HEAD metric == base branch metric")
-	rootCmd.Flags().StringVar(&leBranch, "le", "", "test that HEAD metric <= base branch metric")
-	rootCmd.Flags().StringVar(&leBranch, "less-equal", "", "test that HEAD metric <= base branch metric")
-	rootCmd.Flags().StringVar(&ltBranch, "lt", "", "test that HEAD metric < base branch metric")
-	rootCmd.Flags().StringVar(&ltBranch, "less-than", "", "test that HEAD metric < base branch metric")
+Usage:
+  {{.UseLine}}
+
+Comparison operators (choose one):
+      --less-than, --lt <base>       test that HEAD metric < base branch metric
+      --less-equal, --le <base>      test that HEAD metric <= base branch metric
+      --equal-to, --eq <base>        test that HEAD metric == base branch metric
+      --greater-equal, --ge <base>   test that HEAD metric >= base branch metric
+      --greater-than, --gt <base>    test that HEAD metric > base branch metric
+
+Other flags:
+  -h, --help                   help for ratchet
+      --pre <command>          Command to run before metric command
+      --post <command>         Command to run after metric command
+      --config-file string     Path to config file (YAML or JSON)
+      --config string          Config string (YAML or JSON)
+  -v, --verbose                Show detailed output including both values
+      --version                Show version information
+`)
+
+	// Register flags (order doesn't matter now since we have custom template)
+	rootCmd.Flags().StringVar(&ltBranch, "less-than", "", "")
+	rootCmd.Flags().StringVar(&ltBranch, "lt", "", "")
+	rootCmd.Flags().StringVar(&leBranch, "less-equal", "", "")
+	rootCmd.Flags().StringVar(&leBranch, "le", "", "")
+	rootCmd.Flags().StringVar(&eqBranch, "equal-to", "", "")
+	rootCmd.Flags().StringVar(&eqBranch, "eq", "", "")
+	rootCmd.Flags().StringVar(&geBranch, "greater-equal", "", "")
+	rootCmd.Flags().StringVar(&geBranch, "ge", "", "")
+	rootCmd.Flags().StringVar(&gtBranch, "greater-than", "", "")
+	rootCmd.Flags().StringVar(&gtBranch, "gt", "", "")
 
 	// Other flags
-	rootCmd.Flags().StringVar(&preCmd, "pre", "", "command to run before metric command")
-	rootCmd.Flags().StringVar(&postCmd, "post", "", "command to run after metric command")
+	rootCmd.Flags().StringVar(&preCmd, "pre", "", "")
+	rootCmd.Flags().StringVar(&postCmd, "post", "", "")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config-file", "", "")
+	rootCmd.Flags().StringVar(&configStr, "config", "", "")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "")
+	rootCmd.Flags().BoolVar(&showVersion, "version", false, "")
 
 	// Note: viper binding handled manually in buildConfig()
 }
 
 func runRatchet(cmd *cobra.Command, args []string) error {
+	// Handle version flag
+	if showVersion {
+		fmt.Println("ratchet version 1.0.0") // TODO: Get from build info
+		return nil
+	}
+
 	// Create context with cancellation for interrupt handling
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -106,6 +139,20 @@ func buildConfig(metricCmd string) (*config.Config, error) {
 		v.SetConfigFile(cfgFile)
 		if err := v.ReadInConfig(); err != nil {
 			return nil, fmt.Errorf("failed to read config file %s: %w", cfgFile, err)
+		}
+	}
+
+	// Load config string if specified
+	if configStr != "" {
+		// Try to detect format based on content
+		configStr = strings.TrimSpace(configStr)
+		if strings.HasPrefix(configStr, "{") && strings.HasSuffix(configStr, "}") {
+			v.SetConfigType("json")
+		} else {
+			v.SetConfigType("yaml")
+		}
+		if err := v.ReadConfig(strings.NewReader(configStr)); err != nil {
+			return nil, fmt.Errorf("failed to parse config string: %w", err)
 		}
 	}
 
