@@ -90,7 +90,6 @@ type GitOperations interface {
     CreateWorktree(path, branch string) error
     RemoveWorktree(path string) error
     ResolveBranch(branch string) (string, error)
-    HasUncommittedChanges() (bool, error)
 }
 
 type CommandExecutor interface {
@@ -149,7 +148,6 @@ const (
 - Create and manage Git worktrees
 - Clean up worktrees reliably
 - Resolve branch references to commits
-- Check for uncommitted changes
 
 **Implementation Notes**:
 - Uses `git` command-line tool via exec

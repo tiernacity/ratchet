@@ -20,9 +20,6 @@ type Operations interface {
     
     // ResolveBranch resolves a branch reference to a commit SHA
     ResolveBranch(branch string) (string, error)
-    
-    // HasUncommittedChanges checks if there are uncommitted changes
-    HasUncommittedChanges() (bool, error)
 }
 ```
 
@@ -127,32 +124,6 @@ func (g *gitImpl) ResolveBranch(branch string) (string, error) {
 }
 ```
 
-### HasUncommittedChanges
-Checks for uncommitted changes in the repository.
-
-```go
-func (g *gitImpl) HasUncommittedChanges() (bool, error) {
-    // Check for staged changes
-    cmd := exec.Command("git", "diff", "--cached", "--quiet")
-    if err := cmd.Run(); err != nil {
-        if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
-            return true, nil // Has staged changes
-        }
-        return false, fmt.Errorf("failed to check staged changes: %w", err)
-    }
-    
-    // Check for unstaged changes
-    cmd = exec.Command("git", "diff", "--quiet")
-    if err := cmd.Run(); err != nil {
-        if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
-            return true, nil // Has unstaged changes
-        }
-        return false, fmt.Errorf("failed to check unstaged changes: %w", err)
-    }
-    
-    return false, nil
-}
-```
 
 ## Error Handling
 

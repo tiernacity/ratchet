@@ -1,11 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/tiernacity/ratchet/internal/config"
+	"github.com/tiernacity/ratchet/internal/errors"
+	"github.com/tiernacity/ratchet/internal/orchestrator"
+	"github.com/tiernacity/ratchet/internal/parser"
 )
 
 var (
@@ -14,83 +21,228 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "ratchet",
-	Short: "A CLI tool for [describe purpose]",
-	Long: `Ratchet is a CLI application that helps you [describe what it does].
-	
-This tool can be used both as a standalone CLI and as a GitHub Action.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// Default action when no subcommand is provided
-		_ = cmd.Help()
-	},
+	Use:   "ratchet [flags] <metric command>",
+	Short: "A software ratchet that enforces continuous improvement",
+	Long: `Ratchet is a CLI tool that ensures metrics move in the right direction.
+It compares command output metrics between Git branches to enforce improvements.
+
+Examples:
+  ratchet --gt main "grep -c TODO *.go"          # TODO count must decrease
+  ratchet --le origin/main "npm test | grep failed"  # Failures must not increase
+  ratchet "echo 42"                              # Just output the metric`,
+	Args: cobra.ExactArgs(1),
+	RunE: runRatchet,
 }
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number of ratchet",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ratchet v0.1.0")
-	},
-}
-
-var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Run the main ratchet process",
-	Long:  `Execute the main ratchet functionality with the provided configuration.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if verbose {
-			fmt.Println("Running in verbose mode")
-			fmt.Printf("Config file: %s\n", viper.ConfigFileUsed())
-		}
-
-		// TODO: Implement main functionality
-		fmt.Println("Running ratchet...")
-
-		return nil
-	},
-}
+// Comparison operator flags
+var (
+	gtBranch  string
+	geBranch  string
+	eqBranch  string
+	leBranch  string
+	ltBranch  string
+	preCmd    string
+	postCmd   string
+)
 
 func init() {
-	cobra.OnInitialize(initConfig)
-
 	// Global flags
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ratchet.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config-file", "", "config file path")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 
-	// Bind flags to viper
-	_ = viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+	// Comparison operators (mutually exclusive)
+	rootCmd.Flags().StringVar(&gtBranch, "gt", "", "test that HEAD metric > base branch metric")
+	rootCmd.Flags().StringVar(&gtBranch, "greater-than", "", "test that HEAD metric > base branch metric")
+	rootCmd.Flags().StringVar(&geBranch, "ge", "", "test that HEAD metric >= base branch metric")
+	rootCmd.Flags().StringVar(&geBranch, "greater-equal", "", "test that HEAD metric >= base branch metric")
+	rootCmd.Flags().StringVar(&eqBranch, "eq", "", "test that HEAD metric == base branch metric")
+	rootCmd.Flags().StringVar(&eqBranch, "equal-to", "", "test that HEAD metric == base branch metric")
+	rootCmd.Flags().StringVar(&leBranch, "le", "", "test that HEAD metric <= base branch metric")
+	rootCmd.Flags().StringVar(&leBranch, "less-equal", "", "test that HEAD metric <= base branch metric")
+	rootCmd.Flags().StringVar(&ltBranch, "lt", "", "test that HEAD metric < base branch metric")
+	rootCmd.Flags().StringVar(&ltBranch, "less-than", "", "test that HEAD metric < base branch metric")
 
-	// Add commands
-	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(runCmd)
+	// Other flags
+	rootCmd.Flags().StringVar(&preCmd, "pre", "", "command to run before metric command")
+	rootCmd.Flags().StringVar(&postCmd, "post", "", "command to run after metric command")
+
+	// Note: viper binding handled manually in buildConfig()
 }
 
-func initConfig() {
+func runRatchet(cmd *cobra.Command, args []string) error {
+	// Create context with cancellation for interrupt handling
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	// Build configuration from flags and config file
+	cfg, err := buildConfig(args[0])
+	if err != nil {
+		return err
+	}
+
+	// Create dependencies (placeholder implementations for now)
+	// TODO: Replace with real implementations
+	git := &mockGit{}
+	executor := &mockExecutor{}
+	progressReporter := &mockProgress{}
+	metricParser := parser.New()
+
+	// Create orchestrator
+	tempDir := os.TempDir()
+	orch := orchestrator.New(git, executor, metricParser, progressReporter, tempDir)
+
+	// Run the orchestrator
+	return orch.Run(ctx, cfg)
+}
+
+func buildConfig(metricCmd string) (*config.Config, error) {
+	// Initialize viper
+	v := viper.New()
+
+	// Load config file if specified
 	if cfgFile != "" {
-		// Use config file from the flag
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		// Search config in home directory with name ".ratchet" (without extension)
-		viper.AddConfigPath(home)
-		viper.AddConfigPath(".")
-		viper.SetConfigName(".ratchet")
+		v.SetConfigFile(cfgFile)
+		if err := v.ReadInConfig(); err != nil {
+			return nil, fmt.Errorf("failed to read config file %s: %w", cfgFile, err)
+		}
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	// Determine which operator was used and set corresponding flags
+	var baseBranch string
+	var greaterThan, greaterThanOrEqual, equal, lessThanOrEqual, lessThan bool
 
-	// If a config file is found, read it in
-	if err := viper.ReadInConfig(); err == nil && verbose {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	if gtBranch != "" {
+		greaterThan = true
+		baseBranch = gtBranch
 	}
+	if geBranch != "" {
+		if baseBranch != "" {
+			return nil, fmt.Errorf("multiple comparison operators specified")
+		}
+		greaterThanOrEqual = true
+		baseBranch = geBranch
+	}
+	if eqBranch != "" {
+		if baseBranch != "" {
+			return nil, fmt.Errorf("multiple comparison operators specified")
+		}
+		equal = true
+		baseBranch = eqBranch
+	}
+	if leBranch != "" {
+		if baseBranch != "" {
+			return nil, fmt.Errorf("multiple comparison operators specified")
+		}
+		lessThanOrEqual = true
+		baseBranch = leBranch
+	}
+	if ltBranch != "" {
+		if baseBranch != "" {
+			return nil, fmt.Errorf("multiple comparison operators specified")
+		}
+		lessThan = true
+		baseBranch = ltBranch
+	}
+
+	// Set values from flags
+	v.Set("metric-cmd", metricCmd)
+	v.Set("verbose", verbose)
+	v.Set("greater-than", greaterThan)
+	v.Set("greater-than-or-equal", greaterThanOrEqual)
+	v.Set("equal", equal)
+	v.Set("less-than-or-equal", lessThanOrEqual)
+	v.Set("less-than", lessThan)
+	v.Set("base-branch", baseBranch)
+	v.Set("pre-cmd", preCmd)
+	v.Set("post-cmd", postCmd)
+
+	// Parse into config struct
+	var cfg config.Config
+	if err := v.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse configuration: %w", err)
+	}
+
+	// Normalize and validate
+	if err := cfg.Normalize(); err != nil {
+		return nil, err
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
+		// Print error to stderr
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+
+		// Exit with appropriate code
+		os.Exit(errors.GetExitCode(err))
 	}
+}
+
+// Placeholder implementations - these will be replaced with real implementations later
+type mockGit struct{}
+
+func (g *mockGit) IsGitRepository() error {
+	return nil
+}
+
+func (g *mockGit) CreateWorktree(path, branch string) error {
+	return nil
+}
+
+func (g *mockGit) RemoveWorktree(path string) error {
+	return nil
+}
+
+func (g *mockGit) ResolveBranch(branch string) (string, error) {
+	return "origin/" + branch, nil
+}
+
+
+type mockExecutor struct{}
+
+func (e *mockExecutor) Execute(ctx context.Context, dir, command string) (string, error) {
+	// For now, just return a mock value
+	return "42", nil
+}
+
+type mockProgress struct{}
+
+func (p *mockProgress) Start(baseRef, headRef string, verbose bool) {
+	fmt.Printf("Comparing %s to %s\n", headRef, baseRef)
+}
+
+func (p *mockProgress) UpdateBranch(branch string, phase string, completed bool) {
+	status := "[ ]"
+	if completed {
+		status = "[x]"
+	}
+	fmt.Printf("  %s: %s %s\n", branch, phase, status)
+}
+
+func (p *mockProgress) Success(current, base float64, operator, branch string) {
+	fmt.Printf("HEAD metric (%.4g) is %s %s (%.4g)\n", current, operator, branch, base)
+	fmt.Println("Succeeded")
+}
+
+func (p *mockProgress) Failure(current, base float64, operator, branch string) {
+	fmt.Fprintf(os.Stderr, "HEAD metric (%.4g) is NOT %s %s (%.4g)\n", current, operator, branch, base)
+	fmt.Fprintf(os.Stderr, "Failed\n")
+}
+
+func (p *mockProgress) Error(message string) {
+	fmt.Fprintf(os.Stderr, "Error: %s\n", message)
+}
+
+func (p *mockProgress) NoComparison(value float64) {
+	fmt.Printf("%.4g\n", value)
+}
+
+func (p *mockProgress) Info(message string) {
+	fmt.Fprintf(os.Stderr, "%s\n", message)
 }
