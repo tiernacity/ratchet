@@ -328,7 +328,6 @@ func (o *orchestrator) compareMetrics(baseMetric, headMetric float64, op config.
     }
     
     if !passed {
-        o.reporter.Failure(headMetric, baseMetric, op.HumanString(), baseBranch)
         return errors.NewMetricTestError(headMetric, baseMetric, op.HumanString(), baseBranch)
     }
     
@@ -460,6 +459,187 @@ func TestShouldSuppressHelp(t *testing.T) {
 "Failed"
 "Internal error: panic in goroutine 7"
 ```
+
+## Concise Error Message Specification
+
+### Overview
+Ratchet should provide clear, concise error messages that help users understand what went wrong without overwhelming them with technical details. The error messages should be formatted consistently and avoid redundancy.
+
+### Message Format Requirements
+
+#### General Format
+- **Single line**: Error messages should be a single, concise statement
+- **No trailing punctuation**: Don't end messages with periods, colons, or other punctuation
+- **Lowercase start**: Begin with lowercase unless it's a proper noun
+- **Context over detail**: Provide enough context to understand what failed, but avoid technical stack traces
+
+#### Context Priority
+Error messages should include context in this priority order:
+1. **What failed** (the action being performed)
+2. **Where it failed** (branch name, command, etc.)
+3. **Why it failed** (specific reason)
+
+#### Redundancy Elimination
+- **Avoid repeating "command"**: Don't say "command 'X' failed: command execution failed"
+- **Avoid error chains**: Don't show multiple layers of error wrapping
+- **Consolidate context**: Include branch/phase information naturally, not as separate clauses
+
+### Error Message Categories
+
+#### 1. Command Execution Errors
+**Format**: `{phase} in {branch}: {reason}`
+
+**Examples**:
+```
+# Current (bad)
+"command 'npm test' failed: metric command failed in origin/main: command failed with exit code 1:"
+
+# Improved (good)
+"metric command in origin/main: exit code 1"
+```
+
+#### 2. Command Not Found
+**Format**: `{phase} in {branch}: {command} not found`
+
+**Examples**:
+```
+# Current (bad)
+"command 'npm' failed: pre-command failed in origin/main: command execution failed: exec: \"npm\": executable file not found in $PATH"
+
+# Improved (good)
+"pre-command in origin/main: npm not found"
+```
+
+#### 3. Cancellation
+**Format**: `cancelled`
+
+**Examples**:
+```
+# Current (bad)
+"command 'sleep 3' failed: pre-command failed in origin/main: cancelled"
+
+# Improved (good)
+"cancelled"
+```
+
+#### 4. Git Errors
+**Format**: `{operation}: {reason}`
+
+**Examples**:
+```
+# Current (bad)
+"git branch resolution: branch 'feature-xyz' not found"
+
+# Improved (good)
+"branch 'feature-xyz' not found"
+```
+
+#### 5. Validation Errors
+**Format**: `{field}: {problem}`
+
+**Examples**:
+```
+# Current (good, keep as is)
+"metric-cmd: cannot be empty"
+"operators: multiple comparison operators specified"
+```
+
+#### 6. Metric Test Failures
+**Format**: `HEAD metric ({value}) is not {operator} {branch} ({value})`
+
+**Examples**:
+```
+# Current (good, keep as is)
+"HEAD metric (42) is not greater than main (50)"
+```
+
+#### 7. Parse Errors
+**Format**: `invalid metric output: {reason}`
+
+**Examples**:
+```
+# Current (bad)
+"invalid metric output 'hello world': no numeric value found"
+
+# Improved (good)
+"invalid metric output: no numeric value found"
+```
+
+### Implementation Strategy
+
+#### Phase 1: Simplify Command Errors
+- Modify `CommandError.Error()` to use context-aware formatting
+- Detect the command phase (pre-command, metric, post-command) from the orchestrator
+- Include branch information naturally in the message
+
+#### Phase 2: Eliminate Error Wrapping Chains
+- Prevent multiple layers of error wrapping from appearing in user messages
+- Use the outermost error type to determine the final message format
+- Preserve detailed error information for debugging but hide from users
+
+#### Phase 3: Context-Aware Formatting
+- Pass context (branch, phase) to error creation functions
+- Format messages based on the specific error scenario
+- Maintain consistency across different error types
+
+### Error Message Examples
+
+#### Command Execution Scenarios
+```bash
+# Pre-command failure
+./ratchet --gt main 'echo 42' --pre 'false'
+# Current: Error: command 'false' failed: pre-command failed in main: command failed with exit code 1:
+# Improved: Error: pre-command in main: exit code 1
+
+# Metric command failure  
+./ratchet --gt main 'false'
+# Current: Error: command 'false' failed: metric command failed in main: command failed with exit code 1:
+# Improved: Error: metric command in main: exit code 1
+
+# Command not found
+./ratchet --gt main 'echo 42' --pre 'nonexistent'
+# Current: Error: command 'nonexistent' failed: pre-command failed in main: command execution failed: exec: "nonexistent": executable file not found in $PATH
+# Improved: Error: pre-command in main: nonexistent not found
+
+# Cancellation
+./ratchet --gt main 'echo 42' --pre 'sleep 10'  # ^C
+# Current: Error: command 'sleep 10' failed: pre-command failed in main: cancelled
+# Improved: Error: cancelled
+```
+
+#### Other Error Scenarios
+```bash
+# Git errors
+./ratchet --gt nonexistent 'echo 42'
+# Current: Error: git branch resolution: branch 'nonexistent' not found
+# Improved: Error: branch 'nonexistent' not found
+
+# Validation errors (keep current format)
+./ratchet --gt --lt main 'echo 42'
+# Current: Error: validation error: operators: multiple comparison operators specified
+# Keep as: Error: operators: multiple comparison operators specified
+
+# Parse errors
+./ratchet --gt main 'echo hello'
+# Current: Error: invalid metric output 'hello': no numeric value found
+# Improved: Error: invalid metric output: no numeric value found
+```
+
+### Testing Requirements
+
+#### Unit Tests
+- Test each error message format with expected inputs
+- Verify no trailing punctuation or redundant text
+- Test context propagation (branch names, command phases)
+
+#### Integration Tests
+- Test end-to-end error scenarios with actual command execution
+- Verify error messages match specification
+- Test cancellation scenarios
+
+#### Documentation Tests
+- Ensure examples in documentation match actual error output
+- Update help text and error message examples when formats change
 
 ## Common Error Scenarios
 

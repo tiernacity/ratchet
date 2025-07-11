@@ -1,7 +1,9 @@
 package errors
 
 import (
+	"context"
 	"errors"
+	"strings"
 )
 
 // NewMetricTestError creates a metric test failure
@@ -44,6 +46,81 @@ func WrapCommandError(command string, err error) *CommandError {
 	}
 }
 
+// NewCancelledError creates a cancellation error
+func NewCancelledError() *CancelledError {
+	return &CancelledError{}
+}
+
+// NewPhaseError creates a phase execution error with context
+func NewPhaseError(phase, branch, reason string) *PhaseError {
+	return &PhaseError{
+		Phase:  phase,
+		Branch: branch,
+		Reason: reason,
+	}
+}
+
+// NewPhaseErrorFromExecutorError creates a phase error from an executor error
+func NewPhaseErrorFromExecutorError(phase, branch string, err error) RatchetError {
+	if err == nil {
+		return nil
+	}
+	
+	// Handle different error types directly
+	errStr := err.Error()
+	
+	// Handle cancellation - should return CancelledError, not PhaseError
+	if errStr == "cancelled" || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return NewCancelledError()
+	}
+	
+	// Extract concise reason from error
+	reason := extractConciseReason(err)
+	return NewPhaseError(phase, branch, reason)
+}
+
+// extractConciseReason extracts a concise reason from command execution errors
+func extractConciseReason(err error) string {
+	if err == nil {
+		return "unknown error"
+	}
+	
+	errStr := err.Error()
+	
+	// Handle exit code errors (most common case)
+	if strings.HasPrefix(errStr, "exit status ") {
+		code := strings.TrimPrefix(errStr, "exit status ")
+		return "exit code " + code
+	}
+	
+	// Handle command not found
+	if strings.Contains(errStr, "executable file not found") {
+		// Extract command name from error like: exec: "npm": executable file not found in $PATH
+		if strings.Contains(errStr, "exec: \"") {
+			start := strings.Index(errStr, "exec: \"") + 7
+			end := strings.Index(errStr[start:], "\"")
+			if end > 0 {
+				cmd := errStr[start : start+end]
+				return cmd + " not found"
+			}
+		}
+		return "command not found"
+	}
+	
+	// Handle process killed
+	if strings.Contains(errStr, "killed") {
+		return "process killed"
+	}
+	
+	// Handle signal errors
+	if strings.Contains(errStr, "signal:") {
+		return "interrupted"
+	}
+	
+	// Fallback to original error message
+	return errStr
+}
+
 // WrapParseError wraps an error with parsing context
 func WrapParseError(output string, err error) *ParseError {
 	if err == nil {
@@ -80,6 +157,18 @@ func IsCommandError(err error) bool {
 	return errors.As(err, &ce)
 }
 
+// IsCancelledError checks if an error is a cancellation error
+func IsCancelledError(err error) bool {
+	var ce *CancelledError
+	return errors.As(err, &ce)
+}
+
+// IsPhaseError checks if an error is a phase execution error
+func IsPhaseError(err error) bool {
+	var pe *PhaseError
+	return errors.As(err, &pe)
+}
+
 // IsParseError checks if an error is a parse error
 func IsParseError(err error) bool {
 	var pe *ParseError
@@ -109,6 +198,8 @@ func ShouldSuppressHelp(err error) bool {
 	// Suppress help for runtime errors, but not validation/CLI errors
 	return IsMetricTestError(err) ||
 		IsCommandError(err) ||
+		IsCancelledError(err) ||
+		IsPhaseError(err) ||
 		IsGitError(err) ||
 		IsParseError(err)
 }

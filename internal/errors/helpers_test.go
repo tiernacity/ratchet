@@ -44,6 +44,24 @@ func TestErrorCreationHelpers(t *testing.T) {
 			wantCode: 2,
 			wantMsg:  "invalid metric output 'hello': not a number",
 		},
+		{
+			name:     "cancelled command error",
+			err:      WrapCommandError("sleep 3", fmt.Errorf("cancelled")),
+			wantCode: 2,
+			wantMsg:  "cancelled",
+		},
+		{
+			name:     "phase error",
+			err:      NewPhaseError("pre-command", "main", "exit code 1"),
+			wantCode: 2,
+			wantMsg:  "pre-command in main: exit code 1",
+		},
+		{
+			name:     "cancelled error",
+			err:      NewCancelledError(),
+			wantCode: 2,
+			wantMsg:  "cancelled",
+		},
 	}
 
 	for _, tt := range tests {
@@ -127,6 +145,96 @@ func TestGetExitCode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, GetExitCode(tt.err))
+		})
+	}
+}
+
+func TestExtractConciseReason(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{
+			name: "exit status",
+			err:  fmt.Errorf("exit status 1"),
+			want: "exit code 1",
+		},
+		{
+			name: "command not found",
+			err:  fmt.Errorf("exec: \"npm\": executable file not found in $PATH"),
+			want: "npm not found",
+		},
+		{
+			name: "generic not found",
+			err:  fmt.Errorf("something about executable file not found"),
+			want: "command not found",
+		},
+		{
+			name: "process killed",
+			err:  fmt.Errorf("process killed"),
+			want: "process killed",
+		},
+		{
+			name: "signal error",
+			err:  fmt.Errorf("signal: terminated"),
+			want: "interrupted",
+		},
+		{
+			name: "unknown error",
+			err:  fmt.Errorf("some other error"),
+			want: "some other error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractConciseReason(tt.err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestNewPhaseErrorFromExecutorError(t *testing.T) {
+	tests := []struct {
+		name      string
+		phase     string
+		branch    string
+		err       error
+		wantType  string
+		wantMsg   string
+	}{
+		{
+			name:     "cancellation returns CancelledError",
+			phase:    "pre-command",
+			branch:   "main",
+			err:      fmt.Errorf("cancelled"),
+			wantType: "*errors.CancelledError",
+			wantMsg:  "cancelled",
+		},
+		{
+			name:     "exit status returns PhaseError",
+			phase:    "metric command",
+			branch:   "origin/main",
+			err:      fmt.Errorf("exit status 1"),
+			wantType: "*errors.PhaseError",
+			wantMsg:  "metric command in origin/main: exit code 1",
+		},
+		{
+			name:     "command not found returns PhaseError",
+			phase:    "pre-command",
+			branch:   "main",
+			err:      fmt.Errorf("exec: \"npm\": executable file not found in $PATH"),
+			wantType: "*errors.PhaseError",
+			wantMsg:  "pre-command in main: npm not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NewPhaseErrorFromExecutorError(tt.phase, tt.branch, tt.err)
+			assert.Equal(t, tt.wantMsg, got.Error())
+			assert.Contains(t, fmt.Sprintf("%T", got), tt.wantType)
 		})
 	}
 }

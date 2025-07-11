@@ -15,20 +15,7 @@ func TestConsoleReporter_Success(t *testing.T) {
 
 	result := output.String()
 	assert.Contains(t, result, "HEAD metric (50) is greater than main (42)")
-	assert.Contains(t, result, "Succeeded")
 	assert.Empty(t, errOut.String())
-}
-
-func TestConsoleReporter_Failure(t *testing.T) {
-	var output, errOut bytes.Buffer
-	reporter := NewConsoleWithWriters(&output, &errOut)
-
-	reporter.Failure(42.0, 50.0, "greater than", "main")
-
-	result := errOut.String()
-	assert.Contains(t, result, "HEAD metric (42) is NOT greater than main (50)")
-	assert.Contains(t, result, "Failed")
-	assert.Empty(t, output.String())
 }
 
 func TestConsoleReporter_NoComparison(t *testing.T) {
@@ -124,7 +111,6 @@ func TestNoopReporter(t *testing.T) {
 	reporter.UpdateBranch("main", "metric", false)
 	reporter.UpdateBranch("main", "metric", true)
 	reporter.Success(50.0, 42.0, "greater than", "main")
-	reporter.Failure(42.0, 50.0, "greater than", "main")
 	reporter.Error("test error")
 	reporter.NoComparison(42.0)
 	reporter.Info("test info")

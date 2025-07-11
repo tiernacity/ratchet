@@ -70,10 +70,6 @@ func (m *mockProgressReporter) Success(current, base float64, operator, branch s
 	m.Called(current, base, operator, branch)
 }
 
-func (m *mockProgressReporter) Failure(current, base float64, operator, branch string) {
-	m.Called(current, base, operator, branch)
-}
-
 func (m *mockProgressReporter) Error(message string) {
 	m.Called(message)
 }
@@ -158,9 +154,6 @@ func TestOrchestrator_Run_MetricTestFailure(t *testing.T) {
 	executor.On("Execute", mock.Anything, ".", "echo 42").Return("42", nil)
 	parser.On("Parse", "42").Return(42.0, nil)
 	reporter.On("UpdateBranch", "HEAD", "metric", true)
-
-	// Failure reporting
-	reporter.On("Failure", 42.0, 50.0, "greater than", "main")
 
 	cfg := &config.Config{
 		BaseBranch: "main",

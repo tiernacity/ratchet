@@ -9,30 +9,24 @@ The Progress Reporting module provides visual feedback during ratchet execution.
 package progress
 
 type Reporter interface {
-    // StartTask begins a new task with the given name
-    StartTask(name string)
-    
-    // UpdateTask updates the status of the current task
-    UpdateTask(status TaskStatus)
-    
-    // FinishTask completes the current task with success/failure
-    FinishTask(success bool)
-    
-    // Info prints an informational message
-    Info(message string)
-    
-    // Error prints an error message
+    // Start begins progress reporting for a comparison between base and head refs
+    Start(baseRef, headRef string, verbose bool)
+
+    // UpdateBranch updates the progress for a specific branch and phase
+    UpdateBranch(branch string, phase string, completed bool)
+
+    // Success reports a successful metric test
+    Success(current, base float64, operator, branch string)
+
+    // Error reports an error message
     Error(message string)
+
+    // NoComparison reports a metric value when no comparison is being performed
+    NoComparison(value float64)
+
+    // Info reports an informational message
+    Info(message string)
 }
-
-type TaskStatus int
-
-const (
-    TaskPending TaskStatus = iota
-    TaskRunning
-    TaskComplete
-    TaskFailed
-)
 ```
 
 ## Implementations

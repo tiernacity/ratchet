@@ -35,7 +35,6 @@ type ProgressReporter interface {
 	Start(baseRef, headRef string, verbose bool)
 	UpdateBranch(branch string, phase string, completed bool)
 	Success(current, base float64, operator, branch string)
-	Failure(current, base float64, operator, branch string)
 	Error(message string)
 	NoComparison(value float64)
 	Info(message string)

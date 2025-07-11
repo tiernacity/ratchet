@@ -53,16 +53,8 @@ func (c *consoleReporter) UpdateBranch(branch, phase string, completed bool) {
 
 // Success reports a successful metric test
 func (c *consoleReporter) Success(current, base float64, operator, branch string) {
-	fmt.Fprintf(c.output, "HEAD metric (%s) is %s %s (%s)\n",
+	fmt.Fprintf(c.output, "Success: HEAD metric (%s) is %s %s (%s)\n",
 		formatMetric(current), operator, branch, formatMetric(base))
-	fmt.Fprintf(c.output, "Succeeded\n")
-}
-
-// Failure reports a failed metric test
-func (c *consoleReporter) Failure(current, base float64, operator, branch string) {
-	fmt.Fprintf(c.errOut, "HEAD metric (%s) is NOT %s %s (%s)\n",
-		formatMetric(current), operator, branch, formatMetric(base))
-	fmt.Fprintf(c.errOut, "Failed\n")
 }
 
 // Error reports an error message

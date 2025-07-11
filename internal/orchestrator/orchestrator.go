@@ -86,14 +86,14 @@ func (o *orchestrator) runNoComparison(ctx context.Context, cfg *config.Config) 
 	// Run pre-command if specified
 	if cfg.PreCmd != "" {
 		if _, err := o.executor.Execute(ctx, ".", cfg.PreCmd); err != nil {
-			return errors.WrapCommandError(cfg.PreCmd, err)
+			return errors.NewPhaseErrorFromExecutorError("pre-command", "HEAD", err)
 		}
 	}
 
 	// Run metric command
 	output, err := o.executor.Execute(ctx, ".", cfg.MetricCmd)
 	if err != nil {
-		return errors.WrapCommandError(cfg.MetricCmd, err)
+		return errors.NewPhaseErrorFromExecutorError("metric command", "HEAD", err)
 	}
 
 	// Parse metric
@@ -105,7 +105,7 @@ func (o *orchestrator) runNoComparison(ctx context.Context, cfg *config.Config) 
 	// Run post-command if specified
 	if cfg.PostCmd != "" {
 		if _, err := o.executor.Execute(ctx, ".", cfg.PostCmd); err != nil {
-			return errors.WrapCommandError(cfg.PostCmd, err)
+			return errors.NewPhaseErrorFromExecutorError("post-command", "HEAD", err)
 		}
 	}
 
@@ -120,8 +120,7 @@ func (o *orchestrator) runMetricSequence(ctx context.Context, cfg *config.Config
 	if cfg.PreCmd != "" {
 		o.reporter.UpdateBranch(branchName, "pre", false)
 		if _, err := o.executor.Execute(ctx, dir, cfg.PreCmd); err != nil {
-			return 0, errors.WrapCommandError(cfg.PreCmd,
-				fmt.Errorf("pre-command failed in %s: %w", branchName, err))
+			return 0, errors.NewPhaseErrorFromExecutorError("pre-command", branchName, err)
 		}
 		o.reporter.UpdateBranch(branchName, "pre", true)
 	}
@@ -130,8 +129,7 @@ func (o *orchestrator) runMetricSequence(ctx context.Context, cfg *config.Config
 	o.reporter.UpdateBranch(branchName, "metric", false)
 	output, err := o.executor.Execute(ctx, dir, cfg.MetricCmd)
 	if err != nil {
-		return 0, errors.WrapCommandError(cfg.MetricCmd,
-			fmt.Errorf("metric command failed in %s: %w", branchName, err))
+		return 0, errors.NewPhaseErrorFromExecutorError("metric command", branchName, err)
 	}
 
 	// Parse metric
@@ -145,8 +143,7 @@ func (o *orchestrator) runMetricSequence(ctx context.Context, cfg *config.Config
 	if cfg.PostCmd != "" {
 		o.reporter.UpdateBranch(branchName, "post", false)
 		if _, err := o.executor.Execute(ctx, dir, cfg.PostCmd); err != nil {
-			return 0, errors.WrapCommandError(cfg.PostCmd,
-				fmt.Errorf("post-command failed in %s: %w", branchName, err))
+			return 0, errors.NewPhaseErrorFromExecutorError("post-command", branchName, err)
 		}
 		o.reporter.UpdateBranch(branchName, "post", true)
 	}
@@ -176,7 +173,6 @@ func (o *orchestrator) compareMetrics(baseMetric, headMetric float64, op config.
 		return nil
 	}
 
-	o.reporter.Failure(headMetric, baseMetric, op.HumanString(), baseBranch)
 	return errors.NewMetricTestError(headMetric, baseMetric, op.HumanString(), baseBranch)
 }
 

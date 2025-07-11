@@ -60,13 +60,43 @@ func (e *GitError) Unwrap() error {
 	return e.Wrapped
 }
 
-// CommandError is used for command execution failures
+// CancelledError represents a cancelled operation
+type CancelledError struct{}
+
+func (e *CancelledError) Error() string {
+	return "cancelled"
+}
+
+func (e *CancelledError) ExitCode() int {
+	return 2 // Execution error
+}
+
+// PhaseError represents a command execution failure in a specific phase and branch
+type PhaseError struct {
+	Phase  string // "pre-command", "metric command", "post-command"
+	Branch string // branch name
+	Reason string // concise reason for failure
+}
+
+func (e *PhaseError) Error() string {
+	return fmt.Sprintf("%s in %s: %s", e.Phase, e.Branch, e.Reason)
+}
+
+func (e *PhaseError) ExitCode() int {
+	return 2 // Command execution error
+}
+
+// CommandError is used for backward compatibility with legacy command execution failures
 type CommandError struct {
 	Command string
 	Wrapped error
 }
 
 func (e *CommandError) Error() string {
+	// Check if this is a cancellation error and provide cleaner message
+	if e.Wrapped != nil && e.Wrapped.Error() == "cancelled" {
+		return "cancelled"
+	}
 	return fmt.Sprintf("command '%s' failed: %v", e.Command, e.Wrapped)
 }
 

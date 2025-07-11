@@ -34,14 +34,15 @@ func (e *executorImpl) Execute(ctx context.Context, dir, command string) (string
 	if err != nil {
 		// Check if it's a context cancellation first
 		if ctx.Err() != nil {
-			return "", fmt.Errorf("command execution cancelled: %w", ctx.Err())
+			return "", fmt.Errorf("cancelled")
 		}
 		// Try to get more detailed error information
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("command failed with exit code %d: %s",
-				exitErr.ExitCode(), string(exitErr.Stderr))
+			// Return just the exit status without verbose message
+			return "", fmt.Errorf("exit status %d", exitErr.ExitCode())
 		}
-		return "", fmt.Errorf("command execution failed: %w", err)
+		// Return the error as-is for other cases (command not found, etc.)
+		return "", err
 	}
 
 	return string(output), nil

@@ -17,9 +17,6 @@ func (n *noopReporter) UpdateBranch(branch, phase string, completed bool) {}
 // Success does nothing
 func (n *noopReporter) Success(current, base float64, operator, branch string) {}
 
-// Failure does nothing
-func (n *noopReporter) Failure(current, base float64, operator, branch string) {}
-
 // Error does nothing
 func (n *noopReporter) Error(message string) {}
 
