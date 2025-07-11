@@ -6,8 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-env:
-  GO_VERSION: ''
 
 jobs:
   test:
@@ -16,33 +14,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Read Go version
-      run: |
-        source .github/workflows/go-version.env
-        echo "GO_VERSION=$GO_VERSION" >> $GITHUB_ENV
-    
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: ${{ env.GO_VERSION }}
+        go-version-file: 'go.mod'
     
     - name: Cache Go modules
       uses: actions/cache@v4
       with:
         path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.mod') }}-${{ hashFiles('**/go.sum') }}
         restore-keys: |
-          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
+          ${{ runner.os }}-go-${{ hashFiles('**/go.mod') }}-
     
-    - name: Verify Go version consistency
-      run: |
-        GO_MOD_VERSION=$(grep -E '^go [0-9]+\.[0-9]+' go.mod | awk '{print $2}')
-        if [ "$GO_MOD_VERSION" != "$GO_VERSION" ]; then
-          echo "ERROR: go.mod version ($GO_MOD_VERSION) doesn't match go-version.env ($GO_VERSION)"
-          echo "Please update go.mod to use: go $GO_VERSION"
-          exit 1
-        fi
-        echo "✓ Go versions are consistent: $GO_VERSION"
     
     - name: Download dependencies
       run: go mod download
@@ -76,15 +60,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Read Go version
-      run: |
-        source .github/workflows/go-version.env
-        echo "GO_VERSION=$GO_VERSION" >> $GITHUB_ENV
-    
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: ${{ env.GO_VERSION }}
+        go-version-file: 'go.mod'
     
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v6
@@ -108,16 +87,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Read Go version
-      run: |
-        source .github/workflows/go-version.env
-        echo "GO_VERSION=$GO_VERSION" >> $GITHUB_ENV
-      shell: bash
-    
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: ${{ env.GO_VERSION }}
+        go-version-file: 'go.mod'
     
     - name: Build
       run: go build -o bin/${{ matrix.binary_name }} ./cmd/ratchet
@@ -125,8 +98,8 @@ jobs:
     - name: Test binary
       run: |
         if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          ./bin/${{ matrix.binary_name }} version
+          ./bin/${{ matrix.binary_name }} --version
         else
-          ./bin/${{ matrix.binary_name }} version
+          ./bin/${{ matrix.binary_name }} --version
         fi
       shell: bash
