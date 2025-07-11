@@ -26,22 +26,12 @@ func (g *gitImpl) IsGitRepository() error {
 
 // CreateWorktree creates a new Git worktree for the specified branch
 func (g *gitImpl) CreateWorktree(path, branch string) error {
-	// First, try to create the worktree
-	cmd := exec.Command("git", "worktree", "add", path, branch)
+	// Always use --force to handle existing worktrees/directories robustly
+	cmd := exec.Command("git", "worktree", "add", "--force", path, branch)
 	output, err := cmd.CombinedOutput()
-
 	if err != nil {
-		// If it fails because branch is already checked out, force it
-		if bytes.Contains(output, []byte("already checked out")) {
-			cmd = exec.Command("git", "worktree", "add", "--force", path, branch)
-			if output, err = cmd.CombinedOutput(); err != nil {
-				return fmt.Errorf("failed to create worktree: %s", output)
-			}
-		} else {
-			return fmt.Errorf("failed to create worktree: %s", output)
-		}
+		return fmt.Errorf("failed to create worktree: %s", output)
 	}
-
 	return nil
 }
 
