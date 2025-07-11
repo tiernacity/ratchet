@@ -49,8 +49,17 @@ func (o *orchestrator) Run(ctx context.Context, cfg *config.Config) error {
 			fmt.Errorf("branch '%s' not found", cfg.BaseBranch))
 	}
 
+	// Build phases list based on configuration
+	phases := []string{"metric"}
+	if cfg.PreCmd != "" {
+		phases = append([]string{"pre"}, phases...)
+	}
+	if cfg.PostCmd != "" {
+		phases = append(phases, "post")
+	}
+
 	// Start progress reporting
-	o.reporter.Start(cfg.BaseBranch, "HEAD", cfg.Verbose)
+	o.reporter.Start(cfg.BaseBranch, "HEAD", phases, cfg.Verbose)
 
 	// Create worktree for base branch
 	worktreePath := filepath.Join(o.tempDir, "ratchet-base")
@@ -76,6 +85,9 @@ func (o *orchestrator) Run(ctx context.Context, cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
+
+	// Complete progress reporting
+	o.reporter.Complete()
 
 	// Compare metrics
 	return o.compareMetrics(baseMetric, headMetric, cfg.Operator, cfg.BaseBranch)

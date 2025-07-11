@@ -19,31 +19,26 @@ This document specifies the exact output formatting requirements for Ratchet, in
 ## Progress Display
 
 ### Standard Mode
-Display one line per branch with updating checkboxes:
-
-```
-origin/main: metric [ ]
-HEAD:        metric [ ]
-```
-
-As tasks complete, update checkboxes in-place:
-```
-origin/main: metric [x]
-HEAD:        metric [x]
-```
+No progress lines are displayed. Only final results are shown.
 
 ### Verbose Mode
-Include all commands in the progress line:
+Display one line per branch with updating checkboxes showing all configured commands:
 
 ```
 origin/main: pre [ ] ; metric [ ] ; post [ ]
 HEAD:        pre [ ] ; metric [ ] ; post [ ]
 ```
 
-Update each checkbox as the corresponding command completes:
+Update each checkbox as the corresponding command completes, updating the same lines in-place:
 ```
 origin/main: pre [x] ; metric [x] ; post [x]
 HEAD:        pre [x] ; metric [ ] ; post [ ]
+```
+
+If only metric command is configured:
+```
+origin/main: metric [ ]
+HEAD:        metric [ ]
 ```
 
 ## Success Output
@@ -51,7 +46,6 @@ HEAD:        pre [x] ; metric [ ] ; post [ ]
 ### Standard Success
 ```
 $ ratchet --gt origin/main './my-metric-test.sh'
-
 HEAD metric (5) is greater than origin/main (4)
 Succeeded
 ```
@@ -69,10 +63,15 @@ Succeeded
 ## Failure Output
 
 ### Metric Test Failure
-Progress on stdout, status and failure on stderr:
-
 ```
 $ ratchet --gt origin/main './my-metric-test.sh'
+HEAD metric (5) is NOT greater than origin/main (6)
+Failed
+```
+
+In verbose mode:
+```
+$ ratchet --gt origin/main --verbose './my-metric-test.sh'
 origin/main: metric [x]
 HEAD:        metric [x]
 

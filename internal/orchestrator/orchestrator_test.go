@@ -58,12 +58,16 @@ type mockProgressReporter struct {
 	mock.Mock
 }
 
-func (m *mockProgressReporter) Start(baseRef, headRef string, verbose bool) {
-	m.Called(baseRef, headRef, verbose)
+func (m *mockProgressReporter) Start(baseRef, headRef string, phases []string, verbose bool) {
+	m.Called(baseRef, headRef, phases, verbose)
 }
 
 func (m *mockProgressReporter) UpdateBranch(branch string, phase string, completed bool) {
 	m.Called(branch, phase, completed)
+}
+
+func (m *mockProgressReporter) Complete() {
+	m.Called()
 }
 
 func (m *mockProgressReporter) Success(current, base float64, operator, branch string) {
@@ -95,7 +99,8 @@ func TestOrchestrator_Run_Success(t *testing.T) {
 	git.On("CreateWorktree", "/tmp/ratchet-base", "origin/main").Return(nil)
 	git.On("RemoveWorktree", "/tmp/ratchet-base").Return(nil)
 
-	reporter.On("Start", "main", "HEAD", false)
+	reporter.On("Start", "main", "HEAD", []string{"metric"}, false)
+	reporter.On("Complete")
 
 	// Base branch execution
 	reporter.On("UpdateBranch", "main", "metric", false)
@@ -141,7 +146,8 @@ func TestOrchestrator_Run_MetricTestFailure(t *testing.T) {
 	git.On("CreateWorktree", "/tmp/ratchet-base", "origin/main").Return(nil)
 	git.On("RemoveWorktree", "/tmp/ratchet-base").Return(nil)
 
-	reporter.On("Start", "main", "HEAD", false)
+	reporter.On("Start", "main", "HEAD", []string{"metric"}, false)
+	reporter.On("Complete")
 
 	// Base branch execution
 	reporter.On("UpdateBranch", "main", "metric", false)
@@ -214,7 +220,8 @@ func TestOrchestrator_Run_WithPreAndPostCommands(t *testing.T) {
 	git.On("CreateWorktree", "/tmp/ratchet-base", "origin/main").Return(nil)
 	git.On("RemoveWorktree", "/tmp/ratchet-base").Return(nil)
 
-	reporter.On("Start", "main", "HEAD", true)
+	reporter.On("Start", "main", "HEAD", []string{"pre", "metric", "post"}, true)
+	reporter.On("Complete")
 
 	// Base branch execution with pre/post
 	reporter.On("UpdateBranch", "main", "pre", false)

@@ -55,15 +55,15 @@ func TestConsoleReporter_VerboseMode(t *testing.T) {
 	var output, errOut bytes.Buffer
 	reporter := NewConsoleWithWriters(&output, &errOut)
 
-	// Start in verbose mode
-	reporter.Start("main", "HEAD", true)
-	reporter.UpdateBranch("main", "metric", false)
-	reporter.UpdateBranch("main", "metric", true)
+	// Start in verbose mode with multiple phases
+	reporter.Start("main", "HEAD", []string{"pre", "metric", "post"}, true)
+	reporter.UpdateBranch("main", "pre", true)
+	reporter.UpdateBranch("HEAD", "metric", true)
+	reporter.Complete()
 
 	result := output.String()
-	assert.Contains(t, result, "Comparing HEAD to main")
-	assert.Contains(t, result, "main: metric [ ]")
-	assert.Contains(t, result, "main: metric [x]")
+	assert.Contains(t, result, "main:        pre [x] ; metric [ ] ; post [ ]")
+	assert.Contains(t, result, "HEAD:        pre [ ] ; metric [x] ; post [ ]")
 }
 
 func TestConsoleReporter_NonVerboseMode(t *testing.T) {
@@ -71,7 +71,7 @@ func TestConsoleReporter_NonVerboseMode(t *testing.T) {
 	reporter := NewConsoleWithWriters(&output, &errOut)
 
 	// Start in non-verbose mode
-	reporter.Start("main", "HEAD", false)
+	reporter.Start("main", "HEAD", []string{"metric"}, false)
 	reporter.UpdateBranch("main", "metric", false)
 	reporter.UpdateBranch("main", "metric", true)
 
@@ -107,9 +107,10 @@ func TestNoopReporter(t *testing.T) {
 	// Test that noop reporter doesn't panic and has no side effects
 	reporter := NewNoop()
 
-	reporter.Start("main", "HEAD", true)
+	reporter.Start("main", "HEAD", []string{"metric"}, true)
 	reporter.UpdateBranch("main", "metric", false)
 	reporter.UpdateBranch("main", "metric", true)
+	reporter.Complete()
 	reporter.Success(50.0, 42.0, "greater than", "main")
 	reporter.Error("test error")
 	reporter.NoComparison(42.0)

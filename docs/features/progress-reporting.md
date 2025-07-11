@@ -73,39 +73,11 @@ func (n *noopReporter) Error(message string)       {}
 
 ## Visual Output Format
 
-### Standard Mode
-Shows checkboxes with task names:
-```
-□ Checking git repository
-☑ Checking git repository
-□ Creating worktree for main
-☑ Creating worktree for main
-□ Executing in main: metric command
-☑ Executing in main: metric command
-□ Executing in HEAD: metric command
-☒ Executing in HEAD: metric command
-```
+See `docs/features/output-formatting.md` for the authoritative specification of output format.
 
-### Verbose Mode
-Shows detailed progress with sub-tasks:
-```
-□ Checking git repository
-  ↳ Verifying .git directory exists
-  ↳ Checking for uncommitted changes
-☑ Checking git repository
-
-□ Creating worktree for main
-  ↳ Creating temporary directory: /tmp/ratchet-123
-  ↳ Running: git worktree add /tmp/ratchet-123/base main
-☑ Creating worktree for main
-
-□ Executing in main
-  ↳ Running pre-command: npm install
-  ↳ Running metric command: npm test -- --coverage
-  ↳ Parsing output: 85.5
-  ↳ Running post-command: npm run cleanup
-☑ Executing in main: metric = 85.5
-```
+Summary:
+- **Standard Mode**: No progress lines displayed
+- **Verbose Mode**: Single line per branch showing command progress with checkboxes: `origin/main: pre [x] ; metric [ ] ; post [ ]`
 
 ## Implementation Details
 

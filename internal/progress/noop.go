@@ -9,7 +9,7 @@ func NewNoop() Reporter {
 }
 
 // Start does nothing
-func (n *noopReporter) Start(baseRef, headRef string, verbose bool) {}
+func (n *noopReporter) Start(baseRef, headRef string, phases []string, verbose bool) {}
 
 // UpdateBranch does nothing
 func (n *noopReporter) UpdateBranch(branch, phase string, completed bool) {}
@@ -22,6 +22,9 @@ func (n *noopReporter) Error(message string) {}
 
 // NoComparison does nothing
 func (n *noopReporter) NoComparison(value float64) {}
+
+// Complete does nothing
+func (n *noopReporter) Complete() {}
 
 // Info does nothing
 func (n *noopReporter) Info(message string) {}

@@ -32,8 +32,9 @@ type MetricParser interface {
 
 // ProgressReporter defines the interface for reporting progress
 type ProgressReporter interface {
-	Start(baseRef, headRef string, verbose bool)
+	Start(baseRef, headRef string, phases []string, verbose bool)
 	UpdateBranch(branch string, phase string, completed bool)
+	Complete()
 	Success(current, base float64, operator, branch string)
 	Error(message string)
 	NoComparison(value float64)

@@ -5,13 +5,26 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
+	"syscall"
+	"unsafe"
 )
+
+// ProgressLine tracks the status of commands for a single branch
+type ProgressLine struct {
+	branch string
+	phases map[string]bool // phase name -> completed
+	order  []string        // ordered list of phases
+}
 
 // consoleReporter implements the Reporter interface for console output
 type consoleReporter struct {
-	output  io.Writer
-	errOut  io.Writer
-	verbose bool
+	output      io.Writer
+	errOut      io.Writer
+	verbose     bool
+	lines       map[string]*ProgressLine // branch name -> progress line
+	branchOrder []string                 // ordered list of branches
+	linesShown  bool                     // whether we've shown the initial lines
 }
 
 // NewConsole creates a new console progress reporter
@@ -19,6 +32,7 @@ func NewConsole() Reporter {
 	return &consoleReporter{
 		output: os.Stdout,
 		errOut: os.Stderr,
+		lines:  make(map[string]*ProgressLine),
 	}
 }
 
@@ -27,15 +41,32 @@ func NewConsoleWithWriters(output, errOut io.Writer) Reporter {
 	return &consoleReporter{
 		output: output,
 		errOut: errOut,
+		lines:  make(map[string]*ProgressLine),
 	}
 }
 
 // Start begins progress reporting
-func (c *consoleReporter) Start(baseRef, headRef string, verbose bool) {
+func (c *consoleReporter) Start(baseRef, headRef string, phases []string, verbose bool) {
 	c.verbose = verbose
-	if verbose {
-		fmt.Fprintf(c.output, "Comparing %s to %s\n", headRef, baseRef)
+	if !verbose {
+		return
 	}
+
+	// Initialize progress lines for both branches
+	c.branchOrder = []string{baseRef, headRef}
+	for _, branch := range c.branchOrder {
+		c.lines[branch] = &ProgressLine{
+			branch: branch,
+			phases: make(map[string]bool),
+			order:  phases,
+		}
+		// Initialize all phases as incomplete
+		for _, phase := range phases {
+			c.lines[branch].phases[phase] = false
+		}
+	}
+
+	c.linesShown = false
 }
 
 // UpdateBranch updates progress for a branch and phase
@@ -44,11 +75,56 @@ func (c *consoleReporter) UpdateBranch(branch, phase string, completed bool) {
 		return
 	}
 
-	status := "[ ]"
-	if completed {
-		status = "[x]"
+	line, exists := c.lines[branch]
+	if !exists {
+		return
 	}
-	fmt.Fprintf(c.output, "  %s: %s %s\n", branch, phase, status)
+
+	// Update the phase status
+	line.phases[phase] = completed
+
+	// Show initial lines if not yet shown
+	if !c.linesShown {
+		for _, b := range c.branchOrder {
+			fmt.Fprintf(c.output, "%s\n", c.formatProgressLine(c.lines[b]))
+		}
+		c.linesShown = true
+		return
+	}
+
+	// Find which line to update (1-based index from current cursor position)
+	lineIndex := 0
+	for i, b := range c.branchOrder {
+		if b == branch {
+			lineIndex = len(c.branchOrder) - i
+			break
+		}
+	}
+
+	if lineIndex > 0 {
+		// Move cursor up to the correct line, clear it, and rewrite
+		fmt.Fprintf(c.output, "\033[%dA\r\033[K%s\033[%dB", lineIndex, c.formatProgressLine(line), lineIndex)
+	}
+}
+
+// Complete finishes progress reporting by adding a blank line
+func (c *consoleReporter) Complete() {
+	if c.verbose && len(c.lines) > 0 {
+		fmt.Fprintf(c.output, "\n")
+	}
+}
+
+// formatProgressLine formats a progress line for display
+func (c *consoleReporter) formatProgressLine(line *ProgressLine) string {
+	parts := make([]string, 0, len(line.order))
+	for _, phase := range line.order {
+		checkbox := "[ ]"
+		if line.phases[phase] {
+			checkbox = "[x]"
+		}
+		parts = append(parts, fmt.Sprintf("%s %s", phase, checkbox))
+	}
+	return fmt.Sprintf("%-12s %s", line.branch+":", strings.Join(parts, " ; "))
 }
 
 // Success reports a successful metric test
