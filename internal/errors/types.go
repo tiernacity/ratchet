@@ -27,7 +27,6 @@ func (e *MetricTestError) ExitCode() int {
 	return 1 // Expected failure
 }
 
-
 // ValidationError is used for configuration or input validation failures
 type ValidationError struct {
 	Field   string

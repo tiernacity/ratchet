@@ -43,7 +43,7 @@ func (g *gitImpl) RemoveWorktree(path string) error {
 		cmd = exec.Command("git", "worktree", "remove", "--force", path)
 		if err := cmd.Run(); err != nil {
 			// Last resort: prune worktrees
-			exec.Command("git", "worktree", "prune").Run()
+			_ = exec.Command("git", "worktree", "prune").Run()
 			return fmt.Errorf("failed to remove worktree: %w", err)
 		}
 	}

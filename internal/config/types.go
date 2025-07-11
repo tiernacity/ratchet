@@ -133,12 +133,11 @@ func (c *Config) Validate() error {
 	}
 
 	// Check for potentially dangerous commands (warning only)
-	if isDangerousCommand(c.MetricCmd) || 
-	   (c.PreCmd != "" && isDangerousCommand(c.PreCmd)) ||
-	   (c.PostCmd != "" && isDangerousCommand(c.PostCmd)) {
-		// This is just a warning, not an error
-		// The progress reporter will handle displaying warnings
-	}
+	_ = isDangerousCommand(c.MetricCmd) ||
+		(c.PreCmd != "" && isDangerousCommand(c.PreCmd)) ||
+		(c.PostCmd != "" && isDangerousCommand(c.PostCmd))
+	// This is just a warning, not an error
+	// The progress reporter will handle displaying warnings
 
 	return nil
 }
@@ -149,23 +148,23 @@ func isDangerousCommand(cmd string) bool {
 	if cmd == "" {
 		return false
 	}
-	
+
 	// Parse the command to get the actual executable name
 	parts := strings.Fields(cmd)
 	if len(parts) == 0 {
 		return false
 	}
-	
+
 	// Get the base name of the command (without path)
 	executable := filepath.Base(parts[0])
-	
+
 	// List of known dangerous commands
 	dangerousCommands := map[string]bool{
 		"rm":     true,
 		"rmdir":  true,
-		"del":    true,  // Windows
-		"erase":  true,  // Windows
-		"format": true,  // Windows/DOS
+		"del":    true, // Windows
+		"erase":  true, // Windows
+		"format": true, // Windows/DOS
 		"fdisk":  true,
 		"mkfs":   true,
 		"dd":     true,
@@ -174,27 +173,27 @@ func isDangerousCommand(cmd string) bool {
 		"sudo":   true,
 		"su":     true,
 	}
-	
+
 	// Check if the main command is dangerous
 	if dangerousCommands[executable] {
 		return true
 	}
-	
+
 	// Check for shell operators that could be dangerous
 	cmdStr := strings.Join(parts, " ")
 	dangerousPatterns := []string{
-		"> /",      // Redirecting to root paths
-		"rm -",     // rm with flags
-		"delete ",  // Generic delete
-		"format ",  // Generic format
-		">/dev/",   // Writing to device files
+		"> /",     // Redirecting to root paths
+		"rm -",    // rm with flags
+		"delete ", // Generic delete
+		"format ", // Generic format
+		">/dev/",  // Writing to device files
 	}
-	
+
 	for _, pattern := range dangerousPatterns {
 		if strings.Contains(cmdStr, pattern) {
 			return true
 		}
 	}
-	
+
 	return false
 }

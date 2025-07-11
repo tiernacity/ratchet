@@ -86,7 +86,6 @@ func TestErrorTypeChecking(t *testing.T) {
 	assert.True(t, IsMetricTestError(metricErr))
 	assert.False(t, IsMetricTestError(validErr))
 
-
 	// Test validation error detection
 	assert.True(t, IsValidationError(validErr))
 	assert.False(t, IsValidationError(metricErr))
@@ -155,7 +154,7 @@ func TestGetExitCode(t *testing.T) {
 func TestExtractConciseReason(t *testing.T) {
 	// Create a mock process state for ExitError
 	processState := &os.ProcessState{}
-	
+
 	tests := []struct {
 		name string
 		err  error
@@ -209,14 +208,14 @@ func TestExtractConciseReason(t *testing.T) {
 func TestNewPhaseErrorFromExecutorError(t *testing.T) {
 	// Create mock process state for ExitError
 	processState := &os.ProcessState{}
-	
+
 	tests := []struct {
-		name      string
-		phase     string
-		branch    string
-		err       error
-		wantType  string
-		wantMsg   string
+		name     string
+		phase    string
+		branch   string
+		err      error
+		wantType string
+		wantMsg  string
 	}{
 		{
 			name:     "cancellation returns CancelledError",

@@ -19,7 +19,6 @@ func TestMetricTestError(t *testing.T) {
 	assert.Equal(t, 1, err.ExitCode())
 }
 
-
 func TestValidationError(t *testing.T) {
 	err := &ValidationError{
 		Field:   "metric-cmd",

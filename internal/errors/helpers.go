@@ -66,15 +66,15 @@ func NewPhaseErrorFromExecutorError(phase, branch string, err error) RatchetErro
 	if err == nil {
 		return nil
 	}
-	
+
 	// Handle different error types directly
 	errStr := err.Error()
-	
+
 	// Handle cancellation - should return CancelledError, not PhaseError
 	if errStr == "cancelled" || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return NewCancelledError()
 	}
-	
+
 	// Extract concise reason from error
 	reason := extractConciseReason(err)
 	return NewPhaseError(phase, branch, reason)
@@ -85,7 +85,7 @@ func extractConciseReason(err error) string {
 	if err == nil {
 		return "unknown error"
 	}
-	
+
 	// Check for exec.ExitError (command ran but failed)
 	var exitErr *exec.ExitError
 	if errors.As(err, &exitErr) {
@@ -94,11 +94,11 @@ func extractConciseReason(err error) string {
 			if status.Signaled() {
 				return "interrupted by signal " + status.Signal().String()
 			}
-			return "exit code " + exitErr.ProcessState.String()
+			return "exit code " + exitErr.String()
 		}
-		return "exit code " + exitErr.ProcessState.String()
+		return "exit code " + exitErr.String()
 	}
-	
+
 	// Check for exec.Error (command couldn't be started)
 	var execErr *exec.Error
 	if errors.As(err, &execErr) {
@@ -107,17 +107,17 @@ func extractConciseReason(err error) string {
 		}
 		return "failed to start " + execErr.Name + ": " + execErr.Err.Error()
 	}
-	
+
 	// Check for context cancellation
 	if errors.Is(err, context.Canceled) {
 		return "cancelled"
 	}
-	
+
 	// Check for context timeout
 	if errors.Is(err, context.DeadlineExceeded) {
 		return "timeout"
 	}
-	
+
 	// Check for syscall errors
 	var syscallErr syscall.Errno
 	if errors.As(err, &syscallErr) {
@@ -132,7 +132,7 @@ func extractConciseReason(err error) string {
 			return "system error: " + syscallErr.Error()
 		}
 	}
-	
+
 	// Fallback to original error message (but truncate if too long)
 	errStr := err.Error()
 	if len(errStr) > 100 {
@@ -157,7 +157,6 @@ func IsMetricTestError(err error) bool {
 	var mte *MetricTestError
 	return errors.As(err, &mte)
 }
-
 
 // IsValidationError checks if an error is a validation error
 func IsValidationError(err error) bool {

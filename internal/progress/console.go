@@ -84,7 +84,7 @@ func (c *consoleReporter) UpdateBranch(branch, phase string, completed bool) {
 	// Show initial lines if not yet shown
 	if !c.linesShown {
 		for _, b := range c.branchOrder {
-			fmt.Fprintf(c.output, "%s\n", c.formatProgressLine(c.lines[b]))
+			_, _ = fmt.Fprintf(c.output, "%s\n", c.formatProgressLine(c.lines[b]))
 		}
 		c.linesShown = true
 		return
@@ -101,14 +101,14 @@ func (c *consoleReporter) UpdateBranch(branch, phase string, completed bool) {
 
 	if lineIndex > 0 {
 		// Move cursor up to the correct line, clear it, and rewrite
-		fmt.Fprintf(c.output, "\033[%dA\r\033[K%s\033[%dB", lineIndex, c.formatProgressLine(line), lineIndex)
+		_, _ = fmt.Fprintf(c.output, "\033[%dA\r\033[K%s\033[%dB", lineIndex, c.formatProgressLine(line), lineIndex)
 	}
 }
 
 // Complete finishes progress reporting by adding a blank line
 func (c *consoleReporter) Complete() {
 	if c.verbose && len(c.lines) > 0 {
-		fmt.Fprintf(c.output, "\n")
+		_, _ = fmt.Fprintf(c.output, "\n")
 	}
 }
 
@@ -127,23 +127,23 @@ func (c *consoleReporter) formatProgressLine(line *ProgressLine) string {
 
 // Success reports a successful metric test
 func (c *consoleReporter) Success(current, base float64, operator, branch string) {
-	fmt.Fprintf(c.output, "Success: HEAD metric (%s) is %s %s (%s)\n",
+	_, _ = fmt.Fprintf(c.output, "Success: HEAD metric (%s) is %s %s (%s)\n",
 		formatMetric(current), operator, branch, formatMetric(base))
 }
 
 // Error reports an error message
 func (c *consoleReporter) Error(message string) {
-	fmt.Fprintf(c.errOut, "Error: %s\n", message)
+	_, _ = fmt.Fprintf(c.errOut, "Error: %s\n", message)
 }
 
 // NoComparison reports a metric value when no comparison is performed
 func (c *consoleReporter) NoComparison(value float64) {
-	fmt.Fprintf(c.output, "%s\n", formatMetric(value))
+	_, _ = fmt.Fprintf(c.output, "%s\n", formatMetric(value))
 }
 
 // Info reports an informational message
 func (c *consoleReporter) Info(message string) {
-	fmt.Fprintf(c.errOut, "%s\n", message)
+	_, _ = fmt.Fprintf(c.errOut, "%s\n", message)
 }
 
 // formatMetric formats a metric value for display
