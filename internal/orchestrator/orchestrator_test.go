@@ -99,13 +99,13 @@ func TestOrchestrator_Run_Success(t *testing.T) {
 	git.On("CreateWorktree", "/tmp/ratchet-base", "origin/main").Return(nil)
 	git.On("RemoveWorktree", "/tmp/ratchet-base").Return(nil)
 
-	reporter.On("Start", "origin/main", "HEAD", false)
+	reporter.On("Start", "main", "HEAD", false)
 
 	// Base branch execution
-	reporter.On("UpdateBranch", "origin/main", "metric", false)
+	reporter.On("UpdateBranch", "main", "metric", false)
 	executor.On("Execute", mock.Anything, "/tmp/ratchet-base", "echo 42").Return("42", nil)
 	parser.On("Parse", "42").Return(42.0, nil)
-	reporter.On("UpdateBranch", "origin/main", "metric", true)
+	reporter.On("UpdateBranch", "main", "metric", true)
 
 	// HEAD branch execution
 	reporter.On("UpdateBranch", "HEAD", "metric", false)
@@ -114,7 +114,7 @@ func TestOrchestrator_Run_Success(t *testing.T) {
 	reporter.On("UpdateBranch", "HEAD", "metric", true)
 
 	// Success reporting
-	reporter.On("Success", 50.0, 42.0, "greater than", "origin/main")
+	reporter.On("Success", 50.0, 42.0, "greater than", "main")
 
 	cfg := &config.Config{
 		BaseBranch: "main",
@@ -145,13 +145,13 @@ func TestOrchestrator_Run_MetricTestFailure(t *testing.T) {
 	git.On("CreateWorktree", "/tmp/ratchet-base", "origin/main").Return(nil)
 	git.On("RemoveWorktree", "/tmp/ratchet-base").Return(nil)
 
-	reporter.On("Start", "origin/main", "HEAD", false)
+	reporter.On("Start", "main", "HEAD", false)
 
 	// Base branch execution
-	reporter.On("UpdateBranch", "origin/main", "metric", false)
+	reporter.On("UpdateBranch", "main", "metric", false)
 	executor.On("Execute", mock.Anything, "/tmp/ratchet-base", "echo 42").Return("50", nil)
 	parser.On("Parse", "50").Return(50.0, nil)
-	reporter.On("UpdateBranch", "origin/main", "metric", true)
+	reporter.On("UpdateBranch", "main", "metric", true)
 
 	// HEAD branch execution
 	reporter.On("UpdateBranch", "HEAD", "metric", false)
@@ -160,7 +160,7 @@ func TestOrchestrator_Run_MetricTestFailure(t *testing.T) {
 	reporter.On("UpdateBranch", "HEAD", "metric", true)
 
 	// Failure reporting
-	reporter.On("Failure", 42.0, 50.0, "greater than", "origin/main")
+	reporter.On("Failure", 42.0, 50.0, "greater than", "main")
 
 	cfg := &config.Config{
 		BaseBranch: "main",
@@ -221,21 +221,21 @@ func TestOrchestrator_Run_WithPreAndPostCommands(t *testing.T) {
 	git.On("CreateWorktree", "/tmp/ratchet-base", "origin/main").Return(nil)
 	git.On("RemoveWorktree", "/tmp/ratchet-base").Return(nil)
 
-	reporter.On("Start", "origin/main", "HEAD", true)
+	reporter.On("Start", "main", "HEAD", true)
 
 	// Base branch execution with pre/post
-	reporter.On("UpdateBranch", "origin/main", "pre", false)
+	reporter.On("UpdateBranch", "main", "pre", false)
 	executor.On("Execute", mock.Anything, "/tmp/ratchet-base", "setup.sh").Return("", nil)
-	reporter.On("UpdateBranch", "origin/main", "pre", true)
+	reporter.On("UpdateBranch", "main", "pre", true)
 
-	reporter.On("UpdateBranch", "origin/main", "metric", false)
+	reporter.On("UpdateBranch", "main", "metric", false)
 	executor.On("Execute", mock.Anything, "/tmp/ratchet-base", "echo 42").Return("42", nil)
 	parser.On("Parse", "42").Return(42.0, nil)
-	reporter.On("UpdateBranch", "origin/main", "metric", true)
+	reporter.On("UpdateBranch", "main", "metric", true)
 
-	reporter.On("UpdateBranch", "origin/main", "post", false)
+	reporter.On("UpdateBranch", "main", "post", false)
 	executor.On("Execute", mock.Anything, "/tmp/ratchet-base", "cleanup.sh").Return("", nil)
-	reporter.On("UpdateBranch", "origin/main", "post", true)
+	reporter.On("UpdateBranch", "main", "post", true)
 
 	// HEAD branch execution with pre/post
 	reporter.On("UpdateBranch", "HEAD", "pre", false)
@@ -252,7 +252,7 @@ func TestOrchestrator_Run_WithPreAndPostCommands(t *testing.T) {
 	reporter.On("UpdateBranch", "HEAD", "post", true)
 
 	// Success reporting
-	reporter.On("Success", 50.0, 42.0, "greater than", "origin/main")
+	reporter.On("Success", 50.0, 42.0, "greater than", "main")
 
 	cfg := &config.Config{
 		BaseBranch: "main",

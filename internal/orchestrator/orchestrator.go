@@ -43,20 +43,20 @@ func (o *orchestrator) Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	// Resolve base branch
-	baseBranch, err := o.git.ResolveBranch(cfg.BaseBranch)
+	baseCommit, err := o.git.ResolveBranch(cfg.BaseBranch)
 	if err != nil {
 		return errors.WrapGitError("branch resolution",
 			fmt.Errorf("branch '%s' not found", cfg.BaseBranch))
 	}
 
 	// Start progress reporting
-	o.reporter.Start(baseBranch, "HEAD", cfg.Verbose)
+	o.reporter.Start(cfg.BaseBranch, "HEAD", cfg.Verbose)
 
 	// Create worktree for base branch
 	worktreePath := filepath.Join(o.tempDir, "ratchet-base")
-	if err := o.git.CreateWorktree(worktreePath, baseBranch); err != nil {
+	if err := o.git.CreateWorktree(worktreePath, baseCommit); err != nil {
 		return errors.WrapGitError("worktree creation",
-			fmt.Errorf("failed to create worktree for %s: %w", baseBranch, err))
+			fmt.Errorf("failed to create worktree for %s: %w", cfg.BaseBranch, err))
 	}
 
 	// Ensure cleanup happens in all cases
@@ -67,7 +67,7 @@ func (o *orchestrator) Run(ctx context.Context, cfg *config.Config) error {
 	}()
 
 	// Run metric collection for both branches
-	baseMetric, err := o.runMetricSequence(ctx, cfg, worktreePath, baseBranch)
+	baseMetric, err := o.runMetricSequence(ctx, cfg, worktreePath, cfg.BaseBranch)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (o *orchestrator) Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	// Compare metrics
-	return o.compareMetrics(baseMetric, headMetric, cfg.Operator, baseBranch)
+	return o.compareMetrics(baseMetric, headMetric, cfg.Operator, cfg.BaseBranch)
 }
 
 // runNoComparison runs just the metric command and outputs the result
