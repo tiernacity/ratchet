@@ -63,8 +63,11 @@ Ratchet is a CLI application written in Go that enforces continuous improvement 
 
 ### Error Handling
 
+**CRITICAL**: Always use proper Go error types with `errors.Is()` and `errors.As()`. Never use string matching on error messages. See `docs/ERROR_HANDLING_GUIDE.md` for detailed guidance.
+
 - Define custom error types in `internal/errors`
 - Use error wrapping with `fmt.Errorf("%w", err)` for context
+- Use `errors.As()` and `errors.Is()` for error type checking
 - Exit codes determined by error type in main():
   - 0: Success
   - 1: Metric test failed (expected failure)
@@ -75,7 +78,7 @@ Ratchet is a CLI application written in Go that enforces continuous improvement 
 - **Critical**: Must reliably clean up worktrees in ALL error conditions
 - Use defer for cleanup immediately after creation
 - Handle interrupt signals (SIGINT, SIGTERM) for cleanup
-- Force worktree creation to handle existing worktrees
+- **Always use --force flag** to handle existing worktrees/directories robustly
 - Use unique names to avoid conflicts
 
 ### Configuration

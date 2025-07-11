@@ -54,22 +54,12 @@ Creates a new Git worktree for the specified branch.
 
 ```go
 func (g *gitImpl) CreateWorktree(path, branch string) error {
-    // First, try to create the worktree
-    cmd := exec.Command("git", "worktree", "add", path, branch)
+    // Always use --force to handle existing worktrees/directories robustly
+    cmd := exec.Command("git", "worktree", "add", "--force", path, branch)
     output, err := cmd.CombinedOutput()
-    
     if err != nil {
-        // If it fails because branch is already checked out, force it
-        if bytes.Contains(output, []byte("already checked out")) {
-            cmd = exec.Command("git", "worktree", "add", "--force", path, branch)
-            if output, err = cmd.CombinedOutput(); err != nil {
-                return fmt.Errorf("failed to create worktree: %s", output)
-            }
-        } else {
-            return fmt.Errorf("failed to create worktree: %s", output)
-        }
+        return fmt.Errorf("failed to create worktree: %s", output)
     }
-    
     return nil
 }
 ```
@@ -160,18 +150,6 @@ func TestGitOperations_CreateWorktree(t *testing.T) {
             branch: "main",
             mockOutput: func(cmd string, args []string) ([]byte, error) {
                 return []byte(""), nil
-            },
-            wantErr: false,
-        },
-        {
-            name:   "force creation when already checked out",
-            path:   "/tmp/ratchet-123",
-            branch: "main",
-            mockOutput: func(cmd string, args []string) ([]byte, error) {
-                if contains(args, "--force") {
-                    return []byte(""), nil
-                }
-                return []byte("already checked out"), fmt.Errorf("exit 1")
             },
             wantErr: false,
         },

@@ -6,8 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
-	"unsafe"
 )
 
 // ProgressLine tracks the status of commands for a single branch

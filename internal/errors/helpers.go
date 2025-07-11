@@ -3,7 +3,8 @@ package errors
 import (
 	"context"
 	"errors"
-	"strings"
+	"os/exec"
+	"syscall"
 )
 
 // NewMetricTestError creates a metric test failure
@@ -79,45 +80,64 @@ func NewPhaseErrorFromExecutorError(phase, branch string, err error) RatchetErro
 	return NewPhaseError(phase, branch, reason)
 }
 
-// extractConciseReason extracts a concise reason from command execution errors
+// extractConciseReason extracts a concise reason from command execution errors using proper error types
 func extractConciseReason(err error) string {
 	if err == nil {
 		return "unknown error"
 	}
 	
-	errStr := err.Error()
-	
-	// Handle exit code errors (most common case)
-	if strings.HasPrefix(errStr, "exit status ") {
-		code := strings.TrimPrefix(errStr, "exit status ")
-		return "exit code " + code
-	}
-	
-	// Handle command not found
-	if strings.Contains(errStr, "executable file not found") {
-		// Extract command name from error like: exec: "npm": executable file not found in $PATH
-		if strings.Contains(errStr, "exec: \"") {
-			start := strings.Index(errStr, "exec: \"") + 7
-			end := strings.Index(errStr[start:], "\"")
-			if end > 0 {
-				cmd := errStr[start : start+end]
-				return cmd + " not found"
+	// Check for exec.ExitError (command ran but failed)
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		// Get the actual exit code from the process state
+		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+			if status.Signaled() {
+				return "interrupted by signal " + status.Signal().String()
 			}
+			return "exit code " + exitErr.ProcessState.String()
 		}
-		return "command not found"
+		return "exit code " + exitErr.ProcessState.String()
 	}
 	
-	// Handle process killed
-	if strings.Contains(errStr, "killed") {
-		return "process killed"
+	// Check for exec.Error (command couldn't be started)
+	var execErr *exec.Error
+	if errors.As(err, &execErr) {
+		if execErr.Err == exec.ErrNotFound {
+			return execErr.Name + " not found"
+		}
+		return "failed to start " + execErr.Name + ": " + execErr.Err.Error()
 	}
 	
-	// Handle signal errors
-	if strings.Contains(errStr, "signal:") {
-		return "interrupted"
+	// Check for context cancellation
+	if errors.Is(err, context.Canceled) {
+		return "cancelled"
 	}
 	
-	// Fallback to original error message
+	// Check for context timeout
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "timeout"
+	}
+	
+	// Check for syscall errors
+	var syscallErr syscall.Errno
+	if errors.As(err, &syscallErr) {
+		switch syscallErr {
+		case syscall.ENOENT:
+			return "command not found"
+		case syscall.EACCES:
+			return "permission denied"
+		case syscall.EINTR:
+			return "interrupted"
+		default:
+			return "system error: " + syscallErr.Error()
+		}
+	}
+	
+	// Fallback to original error message (but truncate if too long)
+	errStr := err.Error()
+	if len(errStr) > 100 {
+		return errStr[:97] + "..."
+	}
 	return errStr
 }
 

@@ -191,11 +191,12 @@ func (c *Config) Validate() error {
         }
     }
     
-    // Warn about potentially dangerous commands
-    if strings.Contains(c.MetricCmd, "rm ") || 
-       strings.Contains(c.MetricCmd, "delete") {
+    // Warn about potentially dangerous commands using robust command parsing
+    if isDangerousCommand(c.MetricCmd) || 
+       (c.PreCmd != "" && isDangerousCommand(c.PreCmd)) ||
+       (c.PostCmd != "" && isDangerousCommand(c.PostCmd)) {
         // This is just a warning, not an error
-        fmt.Fprintf(os.Stderr, "Warning: metric command contains potentially destructive operations\n")
+        fmt.Fprintf(os.Stderr, "Warning: command contains potentially destructive operations\n")
     }
     
     return nil

@@ -2,6 +2,9 @@ package errors
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -150,40 +153,48 @@ func TestGetExitCode(t *testing.T) {
 }
 
 func TestExtractConciseReason(t *testing.T) {
+	// Create a mock process state for ExitError
+	processState := &os.ProcessState{}
+	
 	tests := []struct {
 		name string
 		err  error
 		want string
 	}{
 		{
-			name: "exit status",
-			err:  fmt.Errorf("exit status 1"),
-			want: "exit code 1",
+			name: "exit error",
+			err:  &exec.ExitError{ProcessState: processState},
+			want: "exit code " + processState.String(),
 		},
 		{
-			name: "command not found",
-			err:  fmt.Errorf("exec: \"npm\": executable file not found in $PATH"),
+			name: "exec error not found",
+			err:  &exec.Error{Name: "npm", Err: exec.ErrNotFound},
 			want: "npm not found",
 		},
 		{
-			name: "generic not found",
-			err:  fmt.Errorf("something about executable file not found"),
+			name: "exec error other",
+			err:  &exec.Error{Name: "test", Err: fmt.Errorf("permission denied")},
+			want: "failed to start test: permission denied",
+		},
+		{
+			name: "syscall ENOENT",
+			err:  syscall.ENOENT,
 			want: "command not found",
 		},
 		{
-			name: "process killed",
-			err:  fmt.Errorf("process killed"),
-			want: "process killed",
-		},
-		{
-			name: "signal error",
-			err:  fmt.Errorf("signal: terminated"),
-			want: "interrupted",
+			name: "syscall EACCES",
+			err:  syscall.EACCES,
+			want: "permission denied",
 		},
 		{
 			name: "unknown error",
 			err:  fmt.Errorf("some other error"),
 			want: "some other error",
+		},
+		{
+			name: "long error message",
+			err:  fmt.Errorf("this is a very long error message that should be truncated because it exceeds the maximum length and goes on and on and on and on and on"),
+			want: "this is a very long error message that should be truncated because it exceeds the maximum length ...",
 		},
 	}
 
@@ -196,6 +207,9 @@ func TestExtractConciseReason(t *testing.T) {
 }
 
 func TestNewPhaseErrorFromExecutorError(t *testing.T) {
+	// Create mock process state for ExitError
+	processState := &os.ProcessState{}
+	
 	tests := []struct {
 		name      string
 		phase     string
@@ -213,18 +227,18 @@ func TestNewPhaseErrorFromExecutorError(t *testing.T) {
 			wantMsg:  "cancelled",
 		},
 		{
-			name:     "exit status returns PhaseError",
+			name:     "exit error returns PhaseError",
 			phase:    "metric command",
 			branch:   "origin/main",
-			err:      fmt.Errorf("exit status 1"),
+			err:      &exec.ExitError{ProcessState: processState},
 			wantType: "*errors.PhaseError",
-			wantMsg:  "metric command in origin/main: exit code 1",
+			wantMsg:  "metric command in origin/main: exit code " + processState.String(),
 		},
 		{
-			name:     "command not found returns PhaseError",
+			name:     "exec error not found returns PhaseError",
 			phase:    "pre-command",
 			branch:   "main",
-			err:      fmt.Errorf("exec: \"npm\": executable file not found in $PATH"),
+			err:      &exec.Error{Name: "npm", Err: exec.ErrNotFound},
 			wantType: "*errors.PhaseError",
 			wantMsg:  "pre-command in main: npm not found",
 		},

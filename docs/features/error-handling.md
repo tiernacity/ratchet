@@ -3,6 +3,94 @@
 ## Overview
 The Error Handling module defines custom error types that map to specific exit codes and provide consistent error reporting throughout the application. It distinguishes between expected failures (metric tests) and unexpected errors, and controls when help text is displayed to users.
 
+## Error Handling Best Practices
+
+**CRITICAL**: Always use proper Go error types and `errors.Is()` / `errors.As()` for error detection. Never use string matching on error messages.
+
+### ✅ Correct Approach: Typed Error Detection
+
+```go
+import (
+    "errors"
+    "os/exec"
+    "syscall"
+)
+
+// Detect command execution errors using proper types
+func handleCommandError(err error) string {
+    var exitErr *exec.ExitError
+    if errors.As(err, &exitErr) {
+        return fmt.Sprintf("command failed with exit code %d", exitErr.ExitCode())
+    }
+    
+    var execErr *exec.Error
+    if errors.As(err, &execErr) {
+        if execErr.Err == exec.ErrNotFound {
+            return fmt.Sprintf("command '%s' not found", execErr.Name)
+        }
+        return fmt.Sprintf("failed to start command '%s': %v", execErr.Name, execErr.Err)
+    }
+    
+    // Check for specific syscall errors
+    if errors.Is(err, syscall.ENOENT) {
+        return "file or command not found"
+    }
+    
+    return err.Error()
+}
+```
+
+### ❌ Wrong Approach: String Matching (DO NOT USE)
+
+```go
+// FRAGILE - breaks with different Go versions, locales, or error message changes
+func badHandleCommandError(err error) string {
+    errStr := err.Error()
+    
+    // BAD: String matching is fragile and unreliable
+    if strings.Contains(errStr, "exit status") {
+        return "command failed"
+    }
+    if strings.Contains(errStr, "executable file not found") {
+        return "command not found"  
+    }
+    if strings.Contains(errStr, "killed") {
+        return "process killed"
+    }
+    
+    return errStr
+}
+```
+
+### Why String Matching Is Problematic
+
+1. **Locale Dependency**: Error messages change with system language
+2. **Version Dependency**: Error message formats change across Go versions
+3. **OS Dependency**: Different operating systems produce different messages  
+4. **Fragility**: Any change in error message format breaks the code
+5. **Partial Matching**: String fragments may match unintended errors
+
+### Proper Error Type Usage
+
+Always check for specific error types using `errors.As()`:
+
+```go
+// Check for ratchet-specific error types
+var metricErr *errors.MetricTestError
+if errors.As(err, &metricErr) {
+    // Handle metric test failure specifically
+    log.Printf("Metric test failed: %v vs %v", metricErr.Current, metricErr.Base)
+    return 1
+}
+
+var parseErr *errors.ParseError  
+if errors.As(err, &parseErr) {
+    // Handle parse error specifically
+    log.Printf("Failed to parse output: %s", parseErr.Output)
+    return 2
+}
+```
+
 ## Error Types
 
 ### Interface
@@ -484,85 +572,62 @@ Error messages should include context in this priority order:
 - **Avoid error chains**: Don't show multiple layers of error wrapping
 - **Consolidate context**: Include branch/phase information naturally, not as separate clauses
 
-### Error Message Categories
+### Error Detection Patterns
 
-#### 1. Command Execution Errors
-**Format**: `{phase} in {branch}: {reason}`
+#### ✅ Proper Error Type Detection
 
-**Examples**:
-```
-# Current (bad)
-"command 'npm test' failed: metric command failed in origin/main: command failed with exit code 1:"
+Always use structured error checking instead of parsing error messages:
 
-# Improved (good)
-"metric command in origin/main: exit code 1"
-```
-
-#### 2. Command Not Found
-**Format**: `{phase} in {branch}: {command} not found`
-
-**Examples**:
-```
-# Current (bad)
-"command 'npm' failed: pre-command failed in origin/main: command execution failed: exec: \"npm\": executable file not found in $PATH"
-
-# Improved (good)
-"pre-command in origin/main: npm not found"
-```
-
-#### 3. Cancellation
-**Format**: `cancelled`
-
-**Examples**:
-```
-# Current (bad)
-"command 'sleep 3' failed: pre-command failed in origin/main: cancelled"
-
-# Improved (good)
-"cancelled"
+```go
+// Check for specific ratchet error types
+func handleRatchetError(err error) int {
+    var metricErr *errors.MetricTestError
+    if errors.As(err, &metricErr) {
+        fmt.Fprintf(os.Stderr, "Metric test failed: HEAD metric (%.4g) is NOT %s %s (%.4g)\n",
+            metricErr.Current, metricErr.Operator, metricErr.Branch, metricErr.Base)
+        return 1
+    }
+    
+    var phaseErr *errors.PhaseError
+    if errors.As(err, &phaseErr) {
+        fmt.Fprintf(os.Stderr, "Phase '%s' failed in %s: %s\n", 
+            phaseErr.Phase, phaseErr.Branch, phaseErr.Reason)
+        return 2
+    }
+    
+    var gitErr *errors.GitError
+    if errors.As(err, &gitErr) {
+        fmt.Fprintf(os.Stderr, "Git %s failed: %v\n", gitErr.Operation, gitErr.Wrapped)
+        return 2
+    }
+    
+    // Default handling
+    fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+    return 2
+}
 ```
 
-#### 4. Git Errors
-**Format**: `{operation}: {reason}`
+#### ✅ Command Error Detection
 
-**Examples**:
-```
-# Current (bad)
-"git branch resolution: branch 'feature-xyz' not found"
+Use proper exec error types for command failures:
 
-# Improved (good)
-"branch 'feature-xyz' not found"
-```
-
-#### 5. Validation Errors
-**Format**: `{field}: {problem}`
-
-**Examples**:
-```
-# Current (good, keep as is)
-"metric-cmd: cannot be empty"
-"operators: multiple comparison operators specified"
-```
-
-#### 6. Metric Test Failures
-**Format**: `HEAD metric ({value}) is not {operator} {branch} ({value})`
-
-**Examples**:
-```
-# Current (good, keep as is)
-"HEAD metric (42) is not greater than main (50)"
-```
-
-#### 7. Parse Errors
-**Format**: `invalid metric output: {reason}`
-
-**Examples**:
-```
-# Current (bad)
-"invalid metric output 'hello world': no numeric value found"
-
-# Improved (good)
-"invalid metric output: no numeric value found"
+```go
+func analyzeCommandError(err error) (exitCode int, message string) {
+    var exitErr *exec.ExitError
+    if errors.As(err, &exitErr) {
+        return exitErr.ExitCode(), fmt.Sprintf("command failed with exit code %d", exitErr.ExitCode())
+    }
+    
+    var execErr *exec.Error
+    if errors.As(err, &execErr) {
+        if execErr.Err == exec.ErrNotFound {
+            return 127, fmt.Sprintf("command '%s' not found", execErr.Name)
+        }
+        return 2, fmt.Sprintf("failed to start '%s': %v", execErr.Name, execErr.Err)
+    }
+    
+    return 2, err.Error()
+}
 ```
 
 ### Implementation Strategy

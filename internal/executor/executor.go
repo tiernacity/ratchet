@@ -2,7 +2,6 @@ package executor
 
 import (
 	"context"
-	"fmt"
 	"os/exec"
 	"runtime"
 )
@@ -34,14 +33,9 @@ func (e *executorImpl) Execute(ctx context.Context, dir, command string) (string
 	if err != nil {
 		// Check if it's a context cancellation first
 		if ctx.Err() != nil {
-			return "", fmt.Errorf("cancelled")
+			return "", ctx.Err()
 		}
-		// Try to get more detailed error information
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			// Return just the exit status without verbose message
-			return "", fmt.Errorf("exit status %d", exitErr.ExitCode())
-		}
-		// Return the error as-is for other cases (command not found, etc.)
+		// Return the raw Go error - let the errors package handle formatting
 		return "", err
 	}
 

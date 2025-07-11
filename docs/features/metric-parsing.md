@@ -116,26 +116,23 @@ func (p *parserImpl) Parse(output string) (float64, error) {
             fmt.Errorf("metric command produced no output. Ensure your command outputs a single number"))
     }
     
-    // Check for common issues
-    if strings.Contains(output, " ") {
-        numbers := extractNumbers(output)
-        if len(numbers) > 1 {
-            return 0, errors.WrapParseError(output, 
-                fmt.Errorf("metric command output contains multiple numbers: %v. The command must output exactly one number", numbers))
-        }
+    // Extract all numbers from the output first
+    numbers := extractNumbers(output)
+    if len(numbers) == 0 {
+        return 0, errors.WrapParseError(output, 
+            fmt.Errorf("no valid number found in output. Ensure the command outputs a numeric value"))
     }
     
-    // Try parsing
-    val, err := strconv.ParseFloat(output, 64)
-    if err != nil {
-        // Provide context-specific error
-        if strings.Contains(output, "%") {
-            return 0, errors.WrapParseError(output, 
-                fmt.Errorf("output contains '%'. Remove percentage signs from the output"))
-        }
-        
+    if len(numbers) > 1 {
         return 0, errors.WrapParseError(output, 
-            fmt.Errorf("output is not a valid number. Ensure the command outputs only a numeric value"))
+            fmt.Errorf("multiple numbers found in output: %v. The command must output exactly one number", numbers))
+    }
+    
+    // Parse the single extracted number
+    val, err := strconv.ParseFloat(numbers[0], 64)
+    if err != nil {
+        return 0, errors.WrapParseError(output, 
+            fmt.Errorf("failed to parse '%s' as a number: %w", numbers[0], err))
     }
     
     return val, nil
@@ -202,7 +199,9 @@ func TestParser_Parse(t *testing.T) {
             
             if tt.wantErr != "" {
                 require.Error(t, err)
-                assert.Contains(t, err.Error(), tt.wantErr)
+                // Check for specific error types rather than string content
+                var parseErr *errors.ParseError
+                assert.True(t, errors.As(err, &parseErr), "Expected ParseError type")
                 return
             }
             

@@ -2,6 +2,8 @@ package executor
 
 import (
 	"context"
+	"errors"
+	osexec "os/exec"
 	"runtime"
 	"strings"
 	"testing"
@@ -61,7 +63,12 @@ func TestExecutor_Execute_InvalidCommand(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Empty(t, output)
-	assert.Contains(t, err.Error(), "command")
+	
+	// Check that it's an exec.ExitError with exit code 127 (command not found)
+	var exitErr *osexec.ExitError
+	assert.True(t, 
+		errors.As(err, &exitErr) && exitErr.ExitCode() == 127, 
+		"Expected exec.ExitError with exit code 127 for command not found")
 }
 
 func TestExecutor_Execute_InvalidDirectory(t *testing.T) {
@@ -87,5 +94,10 @@ func TestExecutor_Execute_CommandFailure(t *testing.T) {
 	_, err := exec.Execute(context.Background(), ".", cmd)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "exit code")
+	
+	// Check that it's an exec.ExitError with exit code 1
+	var exitErr *osexec.ExitError
+	assert.True(t, 
+		errors.As(err, &exitErr) && exitErr.ExitCode() == 1, 
+		"Expected exec.ExitError with exit code 1 for failed command")
 }
