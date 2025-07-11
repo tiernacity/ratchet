@@ -6,20 +6,38 @@ a ratchet can help you enforce beneficial changes to it. Perhaps you want to
 reduce the incidence of 'TODO' comments in your codebase, for instance.
 
 `ratchet` is a CLI tool and GitHub Action that ensures your metric moves in the right direction. It works by:
+
 1. Running a shell command that outputs a number - your metric
 2. Comparing the metric against a base branch (for example, `main`)
 3. Failing if the metric hasn't improved
 
 You can deploy it to your CI pipeline to drive incremental improvement.
 
+## A note
+
+This repository is two things:
+
+1. A hopefully working and usable ratchet tool for you to use
+2. An experiment in using Claude Code to write everything for me. As such, a learning exercise (and quite the learning exercise it has been!)
+
+Because of the second item, you're going to find some things that could or should be improved. Off the top of my head:
+
+- design documentation does not always reflect the implementation
+- repetition and redundancy in the documentation and, most likely, in the codebase
+- implementation/patterns/idioms are not going to be optimal in some cases
+
+Over time, I'll be figuring out how to work with the agent to improve such things
+
 ## Quick Start
 
 ### Installation
 
 #### Download Binary
+
 Download the latest release from [GitHub Releases](https://github.com/tiernacity/ratchet/releases).
 
 #### Install with Go
+
 ```bash
 go install github.com/tiernacity/ratchet/cmd/ratchet@latest
 ```
@@ -44,6 +62,7 @@ ratchet --pre "./setup.sh" --post "./teardown.sh" "grep -r TODO . | wc -l"
 ```
 
 Ratchet runs your command in two contexts:
+
 1. **Base branch** (perhaps `main`, or the base branch of your PR) - to establishe the baseline metric
 2. **Current branch** (actually, the current working copy) - to compare your branch against the base
 
@@ -52,6 +71,7 @@ passes, ratchet succeeds. If not, it returns an error code.
 
 The "base" for comparison can be any git commit-ish object. The other test
 is run using the current git working copy. Only one test must be specified:
+
 - --gt: working copy metric is **greater than** the supplied branch
 - --ge: metric is **greater than or equal**
 - --eq: metrics are **equal**
@@ -67,11 +87,12 @@ ratchet --lt main "eslint . --format=compact | wc -l"
 # Do not increase complexity violations
 ratchet --le develop "gocyclo -over 10 . | wc -l"
 
-# Increase coverage 
+# Increase coverage
 ratchet --gt trunk --pre "./run-tests.sh --coverage=true" "cat ./coverage.txt"
 ```
 
 ## Use a Config File
+
 ```bash
 $ cat .ratchet
 metric: npm test | grep skip | wc -l
@@ -95,6 +116,7 @@ $ ratchet --config "$(cat ./.ratchet)"
 ## Use a github workflow
 
 Use any of the options allowed in the config file, in your github workflow
+
 ```yaml
 name: Quality Ratchet
 on: [pull_request]
@@ -105,8 +127,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Needed to access the base branch
-          
+          fetch-depth: 0 # Needed to access the base branch
+
       - uses: tiernacity/ratchet@v1
         with:
           metric: "grep -r TODO . | wc -l"
@@ -145,6 +167,7 @@ Other flags:
 ## Troubleshooting
 
 ### "Base branch not found"
+
 ```bash
 # Fetch the base branch manually
 git fetch origin main
@@ -154,25 +177,31 @@ ratchet --lt origin/main "your-command"
 ```
 
 ### "Invalid metric"
+
 Ensure your command outputs only a number:
+
 ```bash
 # ❌ Bad - includes text
-eslint . 
+eslint .
 
 # ✅ Good - only number
 eslint . --format=compact | wc -l
 ```
 
 ### GitHub Actions: Shallow Clone Issues
+
 Add fetch-depth to your checkout:
+
 ```yaml
 - uses: actions/checkout@v4
   with:
-    fetch-depth: 0  # or fetch-depth: 2 for faster execution
+    fetch-depth: 0 # or fetch-depth: 2 for faster execution
 ```
 
 ### Command Fails But Has Valid Output
+
 Some commands might fail but still produce countable output:
+
 ```bash
 # This might exit with code 1 but still count errors
 ratchet "eslint . 2>/dev/null | wc -l"
