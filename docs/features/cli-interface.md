@@ -113,10 +113,14 @@ func main() {
 
 ### Configuration Validation
 ```go
+import (
+    "github.com/tiernacity/ratchet/internal/errors"
+)
+
 func validateConfig(cfg *config.Config) error {
     // Ensure metric command is provided
     if cfg.MetricCmd == "" {
-        return fmt.Errorf("metric command is required")
+        return errors.NewValidationError("metric-cmd", "metric command is required")
     }
     
     // Ensure exactly one operator is specified
@@ -128,7 +132,7 @@ func validateConfig(cfg *config.Config) error {
     if cfg.LessThan { operatorCount++ }
     
     if operatorCount != 1 {
-        return fmt.Errorf("exactly one comparison operator must be specified")
+        return errors.NewValidationError("operator", "exactly one comparison operator must be specified")
     }
     
     return nil

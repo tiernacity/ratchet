@@ -113,6 +113,9 @@ func runRatchet(cmd *cobra.Command, args []string) error {
 	// Build configuration from flags and config file
 	cfg, err := buildConfig(args[0])
 	if err != nil {
+		if errors.ShouldSuppressHelp(err) {
+			cmd.SilenceUsage = true
+		}
 		return err
 	}
 
@@ -127,7 +130,11 @@ func runRatchet(cmd *cobra.Command, args []string) error {
 	orch := orchestrator.New(gitOps, cmdExecutor, metricParser, progressReporter, tempDir)
 
 	// Run the orchestrator
-	return orch.Run(ctx, cfg)
+	err = orch.Run(ctx, cfg)
+	if err != nil && errors.ShouldSuppressHelp(err) {
+		cmd.SilenceUsage = true
+	}
+	return err
 }
 
 func buildConfig(metricCmd string) (*config.Config, error) {
@@ -138,7 +145,7 @@ func buildConfig(metricCmd string) (*config.Config, error) {
 	if cfgFile != "" {
 		v.SetConfigFile(cfgFile)
 		if err := v.ReadInConfig(); err != nil {
-			return nil, fmt.Errorf("failed to read config file %s: %w", cfgFile, err)
+			return nil, errors.NewValidationError("config-file", fmt.Sprintf("failed to read config file %s: %v", cfgFile, err))
 		}
 	}
 
@@ -152,7 +159,7 @@ func buildConfig(metricCmd string) (*config.Config, error) {
 			v.SetConfigType("yaml")
 		}
 		if err := v.ReadConfig(strings.NewReader(configStr)); err != nil {
-			return nil, fmt.Errorf("failed to parse config string: %w", err)
+			return nil, errors.NewValidationError("config", fmt.Sprintf("failed to parse config string: %v", err))
 		}
 	}
 
@@ -166,28 +173,28 @@ func buildConfig(metricCmd string) (*config.Config, error) {
 	}
 	if geBranch != "" {
 		if baseBranch != "" {
-			return nil, fmt.Errorf("multiple comparison operators specified")
+			return nil, errors.NewValidationError("operators", "multiple comparison operators specified")
 		}
 		greaterThanOrEqual = true
 		baseBranch = geBranch
 	}
 	if eqBranch != "" {
 		if baseBranch != "" {
-			return nil, fmt.Errorf("multiple comparison operators specified")
+			return nil, errors.NewValidationError("operators", "multiple comparison operators specified")
 		}
 		equal = true
 		baseBranch = eqBranch
 	}
 	if leBranch != "" {
 		if baseBranch != "" {
-			return nil, fmt.Errorf("multiple comparison operators specified")
+			return nil, errors.NewValidationError("operators", "multiple comparison operators specified")
 		}
 		lessThanOrEqual = true
 		baseBranch = leBranch
 	}
 	if ltBranch != "" {
 		if baseBranch != "" {
-			return nil, fmt.Errorf("multiple comparison operators specified")
+			return nil, errors.NewValidationError("operators", "multiple comparison operators specified")
 		}
 		lessThan = true
 		baseBranch = ltBranch
@@ -208,7 +215,7 @@ func buildConfig(metricCmd string) (*config.Config, error) {
 	// Parse into config struct
 	var cfg config.Config
 	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse configuration: %w", err)
+		return nil, errors.NewValidationError("config", fmt.Sprintf("failed to parse configuration: %v", err))
 	}
 
 	// Normalize and validate
@@ -233,10 +240,7 @@ func getTempDir() string {
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		// Print error to stderr
-		fmt.Fprintln(os.Stderr, err)
-
-		// Exit with appropriate code
+		// Exit with appropriate code (Cobra handles error printing)
 		os.Exit(errors.GetExitCode(err))
 	}
 }

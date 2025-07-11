@@ -27,23 +27,6 @@ func (e *MetricTestError) ExitCode() int {
 	return 1 // Expected failure
 }
 
-// ExecutionError is used for unexpected errors during execution
-type ExecutionError struct {
-	Phase   string // Which phase failed (setup, execution, cleanup)
-	Wrapped error  // The underlying error
-}
-
-func (e *ExecutionError) Error() string {
-	return fmt.Sprintf("%s: %v", e.Phase, e.Wrapped)
-}
-
-func (e *ExecutionError) ExitCode() int {
-	return 2 // Unexpected error
-}
-
-func (e *ExecutionError) Unwrap() error {
-	return e.Wrapped
-}
 
 // ValidationError is used for configuration or input validation failures
 type ValidationError struct {

@@ -27,12 +27,16 @@ func New() Parser {
 
 ### Parse Method
 ```go
+import (
+    "github.com/tiernacity/ratchet/internal/errors"
+)
+
 func (p *parserImpl) Parse(output string) (float64, error) {
     // Trim whitespace
     output = strings.TrimSpace(output)
     
     if output == "" {
-        return 0, fmt.Errorf("metric command produced no output")
+        return 0, errors.WrapParseError(output, fmt.Errorf("output is empty"))
     }
     
     // First try to parse as integer
@@ -46,7 +50,7 @@ func (p *parserImpl) Parse(output string) (float64, error) {
     }
     
     // If neither works, provide helpful error
-    return 0, fmt.Errorf("metric command output '%s' is not a valid number", output)
+    return 0, errors.WrapParseError(output, fmt.Errorf("no numeric value found"))
 }
 ```
 
@@ -86,12 +90,12 @@ type AdvancedParser interface {
 func (p *parserImpl) ParseWithPattern(output, pattern string) (float64, error) {
     re, err := regexp.Compile(pattern)
     if err != nil {
-        return 0, fmt.Errorf("invalid pattern: %w", err)
+        return 0, errors.WrapParseError(output, fmt.Errorf("invalid pattern: %w", err))
     }
     
     matches := re.FindStringSubmatch(output)
     if len(matches) < 2 {
-        return 0, fmt.Errorf("pattern '%s' did not match any number", pattern)
+        return 0, errors.WrapParseError(output, fmt.Errorf("pattern '%s' did not match any number", pattern))
     }
     
     return p.Parse(matches[1])
@@ -108,16 +112,16 @@ func (p *parserImpl) Parse(output string) (float64, error) {
     output = strings.TrimSpace(output)
     
     if output == "" {
-        return 0, fmt.Errorf("metric command produced no output. " +
-            "Ensure your command outputs a single number")
+        return 0, errors.WrapParseError(output, 
+            fmt.Errorf("metric command produced no output. Ensure your command outputs a single number"))
     }
     
     // Check for common issues
     if strings.Contains(output, " ") {
         numbers := extractNumbers(output)
         if len(numbers) > 1 {
-            return 0, fmt.Errorf("metric command output contains multiple numbers: %v. " +
-                "The command must output exactly one number", numbers)
+            return 0, errors.WrapParseError(output, 
+                fmt.Errorf("metric command output contains multiple numbers: %v. The command must output exactly one number", numbers))
         }
     }
     
@@ -126,12 +130,12 @@ func (p *parserImpl) Parse(output string) (float64, error) {
     if err != nil {
         // Provide context-specific error
         if strings.Contains(output, "%") {
-            return 0, fmt.Errorf("output '%s' contains '%'. " +
-                "Remove percentage signs from the output", output)
+            return 0, errors.WrapParseError(output, 
+                fmt.Errorf("output contains '%'. Remove percentage signs from the output"))
         }
         
-        return 0, fmt.Errorf("output '%s' is not a valid number. " +
-            "Ensure the command outputs only a numeric value", output)
+        return 0, errors.WrapParseError(output, 
+            fmt.Errorf("output is not a valid number. Ensure the command outputs only a numeric value"))
     }
     
     return val, nil

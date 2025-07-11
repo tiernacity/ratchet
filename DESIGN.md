@@ -93,7 +93,7 @@ type GitOperations interface {
 }
 
 type CommandExecutor interface {
-    Execute(ctx context.Context, dir, command string) (string, string, error)
+    Execute(ctx context.Context, dir, command string) (string, error)
 }
 
 type MetricParser interface {
@@ -199,23 +199,47 @@ const (
 - No-op implementation for unit tests
 
 ### internal/errors
-**Purpose**: Custom error types for proper exit codes
+**Purpose**: Custom error types for proper exit codes and help display control
 
 **Responsibilities**:
 - Define error types that map to exit codes
 - Distinguish between test failures and execution errors
 - Provide error wrapping utilities
+- Control when help text is displayed to users
 
 **Types**:
 ```go
 type MetricTestError struct {
+    Current  float64
+    Base     float64
+    Operator string
+    Branch   string
+}
+
+type ValidationError struct {
+    Field   string
     Message string
 }
 
-type ExecutionError struct {
+type GitError struct {
+    Operation string
+    Wrapped   error
+}
+
+type CommandError struct {
+    Command string
+    Wrapped error
+}
+
+type ParseError struct {
+    Output  string
     Wrapped error
 }
 ```
+
+**Key Functions**:
+- `GetExitCode(err error) int` - Returns appropriate exit code for error type
+- `ShouldSuppressHelp(err error) bool` - Determines if help should be shown
 
 ## Execution Flow
 
@@ -268,11 +292,16 @@ type ExecutionError struct {
 
 ## Error Handling Strategy
 
-1. **Validation Errors**: Return immediately with ExecutionError
-2. **Git Errors**: Wrap with context and return as ExecutionError
-3. **Command Failures**: Include command output in error message
-4. **Metric Test Failures**: Return MetricTestError (exit code 1)
-5. **Unexpected Errors**: Wrap as ExecutionError (exit code 2)
+1. **Validation Errors**: Return ValidationError, show help text (exit code 2)
+2. **Git Errors**: Wrap with GitError, suppress help (exit code 2)
+3. **Command Failures**: Wrap with CommandError, suppress help (exit code 2)
+4. **Parse Errors**: Wrap with ParseError, suppress help (exit code 2)
+5. **Metric Test Failures**: Return MetricTestError, suppress help (exit code 1)
+
+### Help Display Logic
+- **Show help**: ValidationError, CLI parsing errors (missing args, unknown flags)
+- **Suppress help**: All runtime errors (GitError, CommandError, ParseError, MetricTestError)
+- Implemented via `cmd.SilenceUsage = true` when `errors.ShouldSuppressHelp()` returns true
 
 ## Testing Strategy
 

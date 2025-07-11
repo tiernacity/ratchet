@@ -1,8 +1,9 @@
 package config
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/tiernacity/ratchet/internal/errors"
 )
 
 // Config represents the complete application configuration
@@ -76,15 +77,7 @@ func (op ComparisonOperator) HumanString() string {
 	}
 }
 
-// ValidationError represents a configuration validation error
-type ValidationError struct {
-	Field   string
-	Message string
-}
-
-func (e *ValidationError) Error() string {
-	return fmt.Sprintf("validation error: %s: %s", e.Field, e.Message)
-}
+// Remove local ValidationError type - use the one from errors package
 
 // Normalize converts boolean operator flags to the Operator enum
 func (c *Config) Normalize() error {
@@ -118,10 +111,7 @@ func (c *Config) Normalize() error {
 	}
 
 	if count > 1 {
-		return &ValidationError{
-			Field:   "operator",
-			Message: "multiple comparison operators specified",
-		}
+		return errors.NewValidationError("operator", "multiple comparison operators specified")
 	}
 
 	return nil
@@ -131,20 +121,14 @@ func (c *Config) Normalize() error {
 func (c *Config) Validate() error {
 	// Check required fields
 	if c.MetricCmd == "" {
-		return &ValidationError{
-			Field:   "metric-cmd",
-			Message: "metric command is required",
-		}
+		return errors.NewValidationError("metric-cmd", "metric command is required")
 	}
 
 	// Note: OpUnknown is valid for no-comparison mode
 
 	// Validate base branch (only required for comparison mode)
 	if c.Operator != OpUnknown && c.BaseBranch == "" {
-		return &ValidationError{
-			Field:   "base-branch",
-			Message: "base branch cannot be empty when using comparison operator",
-		}
+		return errors.NewValidationError("base-branch", "base branch cannot be empty when using comparison operator")
 	}
 
 	// Check for potentially dangerous commands (warning only)

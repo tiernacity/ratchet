@@ -73,6 +73,10 @@ func (op ComparisonOperator) String() string {
 
 ### Implementation
 ```go
+import (
+    "github.com/tiernacity/ratchet/internal/errors"
+)
+
 func Load(v *viper.Viper, configFile string) (*Config, error) {
     // Set defaults
     v.SetDefault("base-branch", "main")
@@ -82,7 +86,8 @@ func Load(v *viper.Viper, configFile string) (*Config, error) {
     if configFile != "" {
         v.SetConfigFile(configFile)
         if err := v.ReadInConfig(); err != nil {
-            return nil, fmt.Errorf("failed to read config file: %w", err)
+            return nil, errors.NewValidationError("config-file", 
+                fmt.Sprintf("failed to read config file: %v", err))
         }
     }
     
@@ -94,7 +99,8 @@ func Load(v *viper.Viper, configFile string) (*Config, error) {
     // Unmarshal to struct
     var cfg Config
     if err := v.Unmarshal(&cfg); err != nil {
-        return nil, fmt.Errorf("failed to parse configuration: %w", err)
+        return nil, errors.NewValidationError("config", 
+            fmt.Sprintf("failed to parse configuration: %v", err))
     }
     
     // Normalize and validate

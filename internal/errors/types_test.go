@@ -19,17 +19,6 @@ func TestMetricTestError(t *testing.T) {
 	assert.Equal(t, 1, err.ExitCode())
 }
 
-func TestExecutionError(t *testing.T) {
-	underlying := fmt.Errorf("command not found")
-	err := &ExecutionError{
-		Phase:   "setup",
-		Wrapped: underlying,
-	}
-
-	assert.Equal(t, "setup: command not found", err.Error())
-	assert.Equal(t, 2, err.ExitCode())
-	assert.Equal(t, underlying, err.Unwrap())
-}
 
 func TestValidationError(t *testing.T) {
 	err := &ValidationError{

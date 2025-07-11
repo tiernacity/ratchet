@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tiernacity/ratchet/internal/errors"
 )
 
 func TestComparisonOperator_String(t *testing.T) {
@@ -196,9 +197,6 @@ func TestConfig_Validate(t *testing.T) {
 }
 
 func TestValidationError_Error(t *testing.T) {
-	err := &ValidationError{
-		Field:   "test-field",
-		Message: "test message",
-	}
+	err := errors.NewValidationError("test-field", "test message")
 	assert.Equal(t, "validation error: test-field: test message", err.Error())
 }

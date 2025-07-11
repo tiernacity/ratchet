@@ -162,6 +162,10 @@ func (o *orchestrator) setupEnvironment(ctx context.Context, cfg *config.Config)
 
 ### Command Execution
 ```go
+import (
+    "github.com/tiernacity/ratchet/internal/errors"
+)
+
 func (o *orchestrator) executeInBranch(
     ctx context.Context,
     cfg *config.Config,
@@ -175,7 +179,7 @@ func (o *orchestrator) executeInBranch(
         o.progress.UpdateTask("pre-command", TaskRunning)
         if _, _, err := o.executor.Execute(ctx, dir, cfg.PreCmd); err != nil {
             o.progress.FinishTask("pre-command", false)
-            return 0, fmt.Errorf("pre-command failed: %w", err)
+            return 0, errors.WrapCommandError(cfg.PreCmd, err)
         }
     }
     
@@ -184,13 +188,13 @@ func (o *orchestrator) executeInBranch(
     output, _, err := o.executor.Execute(ctx, dir, cfg.MetricCmd)
     if err != nil {
         o.progress.FinishTask("metric-command", false)
-        return 0, fmt.Errorf("metric command failed: %w", err)
+        return 0, errors.WrapCommandError(cfg.MetricCmd, err)
     }
     
     // Parse metric
     metric, err := o.parser.Parse(output)
     if err != nil {
-        return 0, fmt.Errorf("failed to parse metric: %w", err)
+        return 0, err // parser already returns ParseError
     }
     
     // Post-command
@@ -198,7 +202,7 @@ func (o *orchestrator) executeInBranch(
         o.progress.UpdateTask("post-command", TaskRunning)
         if _, _, err := o.executor.Execute(ctx, dir, cfg.PostCmd); err != nil {
             o.progress.FinishTask("post-command", false)
-            return 0, fmt.Errorf("post-command failed: %w", err)
+            return 0, errors.WrapCommandError(cfg.PostCmd, err)
         }
     }
     

@@ -137,7 +137,7 @@ func (o *orchestrator) runMetricSequence(ctx context.Context, cfg *config.Config
 	// Parse metric
 	metric, err := o.parser.Parse(output)
 	if err != nil {
-		return 0, fmt.Errorf("metric parsing failed in %s: %w", branchName, err)
+		return 0, err // parser already returns ParseError
 	}
 	o.reporter.UpdateBranch(branchName, "metric", true)
 
