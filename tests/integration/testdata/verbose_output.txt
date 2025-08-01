@@ -1,0 +1,35 @@
+# Test verbose output flag
+
+# Initialize git repo
+exec git init
+exec git config user.name "Test User"
+exec git config user.email "test@example.com"
+
+# Create main branch
+exec git checkout -b main  
+exec git add .
+exec git commit -m 'main commit'
+
+# Create feature branch with fewer lines
+exec git checkout -b feature
+cp short.txt content.txt
+exec git add .
+exec git commit -m 'feature commit'
+
+# Test with verbose flag - just verify success message still appears
+exec ratchet --verbose --lt main 'wc -l < content.txt'
+stdout 'Success: HEAD metric \(2\) is less than main \(5\)'
+
+# Test without verbose flag
+exec ratchet --lt main 'wc -l < content.txt'
+stdout 'Success: HEAD metric \(2\) is less than main \(5\)'
+
+-- content.txt --
+line 1
+line 2
+line 3
+line 4
+line 5
+-- short.txt --
+line 1
+line 2
