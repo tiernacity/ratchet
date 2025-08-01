@@ -34,26 +34,53 @@ inputs:
     description: 'Show detailed output'
     required: false
     default: 'false'
-  version:
-    description: 'Version of ratchet to use (e.g., v1.0.0)'
-    required: false
-    default: 'latest'
 
 runs:
   using: 'composite'
   steps:
-    - name: Determine version
-      id: version
+    - name: Determine execution mode
+      id: mode
       shell: bash
+      env:
+        ACTION_REF: ${{ github.action_ref }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
-        if [[ "${{ inputs.version }}" == "latest" ]]; then
-          VERSION=$(curl -s https://api.github.com/repos/tiernacity/ratchet/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        echo "Action ref: $ACTION_REF"
+        echo "Action path: $ACTION_PATH"
+        
+        # Check if running from source (uses: ./)
+        if [[ -z "$ACTION_REF" ]] && [[ -f "$ACTION_PATH/go.mod" ]]; then
+          echo "Running from source"
+          echo "mode=source" >> $GITHUB_OUTPUT
         else
-          VERSION="${{ inputs.version }}"
+          echo "Running from release"
+          echo "mode=binary" >> $GITHUB_OUTPUT
+          
+          # Determine version from action ref
+          if [[ "$ACTION_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.+)?$ ]]; then
+            # Tagged version (e.g., v1.0.0 or v0.1.0-alpha.1)
+            VERSION="$ACTION_REF"
+          elif [[ "$ACTION_REF" == "main" ]] || [[ "$ACTION_REF" == "master" ]]; then
+            # Main branch - use latest release
+            VERSION=$(curl -s https://api.github.com/repos/tiernacity/ratchet/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          else
+            # Commit SHA or other branch - fail with helpful message
+            echo "Error: Cannot determine version from action ref '$ACTION_REF'"
+            echo "Please use a tagged version (e.g., @v1.0.0) or @main"
+            exit 1
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
         fi
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
     
-    - name: Download ratchet
+    - name: Setup Go (source mode)
+      if: steps.mode.outputs.mode == 'source'
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: ${{ github.action_path }}/go.mod
+    
+    - name: Download ratchet (binary mode)
+      if: steps.mode.outputs.mode == 'binary'
       shell: bash
       run: |
         # Determine OS and architecture
@@ -71,8 +98,10 @@ runs:
         esac
         
         # Set archive name (GoReleaser format)
-        VERSION="${{ steps.version.outputs.version }}"
-        ARCHIVE_NAME="ratchet_${VERSION}_${OS}_${ARCH}"
+        VERSION="${{ steps.mode.outputs.version }}"
+        # Strip 'v' prefix for archive name
+        VERSION_NO_V="${VERSION#v}"
+        ARCHIVE_NAME="ratchet_${VERSION_NO_V}_${OS}_${ARCH}"
         
         # Determine archive extension
         if [[ "$OS" == "windows" ]]; then
@@ -84,7 +113,7 @@ runs:
         ARCHIVE_FILE="${ARCHIVE_NAME}.${ARCHIVE_EXT}"
         
         # Download archive
-        URL="https://github.com/tiernacity/ratchet/releases/download/${{ steps.version.outputs.version }}/${ARCHIVE_FILE}"
+        URL="https://github.com/tiernacity/ratchet/releases/download/${{ steps.mode.outputs.version }}/${ARCHIVE_FILE}"
         echo "Downloading ratchet from $URL"
         curl -LO "$URL"
         
@@ -119,5 +148,13 @@ runs:
     - name: Run ratchet
       shell: bash
       run: |
-        # Convert inputs to JSON and pass to ratchet
-        ratchet --config '${{ toJSON(inputs) }}'
+        # Convert inputs to JSON config
+        CONFIG='${{ toJSON(inputs) }}'
+        
+        # Run based on mode
+        if [[ "${{ steps.mode.outputs.mode }}" == "source" ]]; then
+          cd "${{ github.action_path }}"
+          go run ./cmd/ratchet --config "$CONFIG"
+        else
+          ratchet --config "$CONFIG"
+        fi
