@@ -17,6 +17,7 @@ import (
 	"github.com/tiernacity/ratchet/internal/orchestrator"
 	"github.com/tiernacity/ratchet/internal/parser"
 	"github.com/tiernacity/ratchet/internal/progress"
+	"github.com/tiernacity/ratchet/internal/version"
 )
 
 var (
@@ -102,7 +103,7 @@ Other flags:
 func runRatchet(cmd *cobra.Command, args []string) error {
 	// Handle version flag
 	if showVersion {
-		fmt.Println("ratchet version 1.0.0") // TODO: Get from build info
+		fmt.Println(version.GetVersion())
 		return nil
 	}
 

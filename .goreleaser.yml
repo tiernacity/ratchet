@@ -1,0 +1,127 @@
+version: 2
+
+project_name: ratchet
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: ratchet
+    main: ./cmd/ratchet
+    binary: ratchet
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X github.com/tiernacity/ratchet/internal/version.version={{.Version}}
+      - -X github.com/tiernacity/ratchet/internal/version.commit={{.FullCommit}}
+      - -X github.com/tiernacity/ratchet/internal/version.date={{.Date}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: ratchet
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+
+# sboms:
+#   - artifacts: archive
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "merge conflict"
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+  groups:
+    - title: "New Features"
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: "Bug Fixes"
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 10
+    - title: "Documentation Updates"
+      regexp: "^.*docs[(\\w)]*:+.*$"
+      order: 15
+    - title: "Other Changes"
+      order: 999
+
+release:
+  github:
+    owner: tiernacity
+    name: ratchet
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## Ratchet {{ .Version }}
+    
+    Ratchet enforces continuous improvement by comparing command output metrics between Git branches.
+    
+    ### Installation
+    
+    #### Download pre-built binaries
+    
+    ```bash
+    # Linux x86_64
+    curl -L -o ratchet https://github.com/tiernacity/ratchet/releases/download/{{ .Tag }}/ratchet_{{ .Version }}_linux_amd64.tar.gz
+    tar -xzf ratchet_{{ .Version }}_linux_amd64.tar.gz
+    chmod +x ratchet
+    sudo mv ratchet /usr/local/bin/
+    
+    # macOS x86_64
+    curl -L -o ratchet https://github.com/tiernacity/ratchet/releases/download/{{ .Tag }}/ratchet_{{ .Version }}_darwin_amd64.tar.gz
+    tar -xzf ratchet_{{ .Version }}_darwin_amd64.tar.gz
+    chmod +x ratchet
+    sudo mv ratchet /usr/local/bin/
+    
+    # macOS Apple Silicon
+    curl -L -o ratchet https://github.com/tiernacity/ratchet/releases/download/{{ .Tag }}/ratchet_{{ .Version }}_darwin_arm64.tar.gz
+    tar -xzf ratchet_{{ .Version }}_darwin_arm64.tar.gz
+    chmod +x ratchet
+    sudo mv ratchet /usr/local/bin/
+    
+    # Windows x86_64 (PowerShell)
+    Invoke-WebRequest -Uri "https://github.com/tiernacity/ratchet/releases/download/{{ .Tag }}/ratchet_{{ .Version }}_windows_amd64.zip" -OutFile "ratchet.zip"
+    Expand-Archive -Path "ratchet.zip" -DestinationPath "."
+    # Move ratchet.exe to a directory in your PATH
+    ```
+    
+    #### Use as GitHub Action
+    
+    ```yaml
+    - name: Run Ratchet
+      uses: tiernacity/ratchet@{{ .Tag }}
+      with:
+        metric-cmd: 'find . -name "*.go" | wc -l'
+        operator: '>='
+        base-branch: 'main'
+    ```
+  footer: |
+    **Full Changelog**: https://github.com/tiernacity/ratchet/compare/{{ .PreviousTag }}...{{ .Tag }}
+    
+    **Checksums**
+    All binaries are checksummed for security. Download the `{{ .ProjectName }}_{{ .Version }}_checksums.txt` file to verify integrity.
+
+# GitHub Action marketplace publishing
+# This section configures the action.yml to be published to GitHub marketplace
+# Note: The actual marketplace publishing happens through the GitHub UI
