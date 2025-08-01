@@ -9,9 +9,9 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	os.Exit(testscript.RunMain(m, map[string]func() int{
-		"ratchet": cli.Main,
-	}))
+	testscript.Main(m, map[string]func(){
+		"ratchet": func() { os.Exit(cli.Main()) },
+	})
 }
 
 func TestCLI(t *testing.T) {
