@@ -90,7 +90,7 @@ func TestConfig_Normalize(t *testing.T) {
 		{
 			name: "no operator - valid for no-comparison mode",
 			config: Config{
-				MetricCmd: "echo 42",
+				Metric: "echo 42",
 			},
 			want: OpUnknown,
 		},
@@ -132,7 +132,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "valid config",
 			config: Config{
-				MetricCmd:  "echo 42",
+				Metric:  "echo 42",
 				BaseBranch: "main",
 				Operator:   OpGreaterThan,
 			},
@@ -144,12 +144,12 @@ func TestConfig_Validate(t *testing.T) {
 				Operator:   OpGreaterThan,
 			},
 			wantErr: true,
-			errMsg:  "validation error: metric-cmd: metric command is required",
+			errMsg:  "validation error: metric: metric command is required",
 		},
 		{
 			name: "missing base branch with comparison operator",
 			config: Config{
-				MetricCmd: "echo 42",
+				Metric: "echo 42",
 				Operator:  OpGreaterThan,
 			},
 			wantErr: true,
@@ -158,7 +158,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "no-comparison mode valid",
 			config: Config{
-				MetricCmd: "echo 42",
+				Metric: "echo 42",
 				Operator:  OpUnknown,
 				// BaseBranch not required for no-comparison mode
 			},
@@ -166,7 +166,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "potentially dangerous command - rm",
 			config: Config{
-				MetricCmd:  "rm -rf /tmp/test && echo 42",
+				Metric:  "rm -rf /tmp/test && echo 42",
 				BaseBranch: "main",
 				Operator:   OpGreaterThan,
 			},
@@ -175,7 +175,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "potentially dangerous command - delete",
 			config: Config{
-				MetricCmd:  "delete-old-files.sh | wc -l",
+				Metric:  "delete-old-files.sh | wc -l",
 				BaseBranch: "main",
 				Operator:   OpGreaterThan,
 			},

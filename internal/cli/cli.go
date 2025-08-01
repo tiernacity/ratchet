@@ -37,7 +37,18 @@ Supply a command that outputs your metric, and ratchet will compare the metric a
 		if showVersion {
 			return nil // Skip arg validation for version
 		}
-		return cobra.ExactArgs(1)(cmd, args)
+		// Either positional arg or --metric flag, but not both
+		if len(args) > 1 {
+			return errors.NewValidationError("args", "too many arguments provided")
+		}
+		if len(args) == 1 && metricCmd != "" {
+			return errors.NewValidationError("metric", "metric specified both as argument and flag")
+		}
+		if len(args) == 0 && metricCmd == "" {
+			// Will be checked later in buildConfig to allow config file to provide metric
+			return nil
+		}
+		return nil
 	},
 	RunE: runRatchet,
 }
@@ -53,6 +64,7 @@ var (
 	postCmd     string
 	configStr   string
 	showVersion bool
+	metricCmd   string
 )
 
 func init() {
@@ -71,6 +83,7 @@ Comparison operators (choose one):
 
 Other flags:
   -h, --help                   help for ratchet
+      --metric <command>       Metric command (alternative to positional argument)
       --pre <command>          Command to run before metric command
       --post <command>         Command to run after metric command
       --config-file string     Path to config file (YAML or JSON)
@@ -92,6 +105,7 @@ Other flags:
 	rootCmd.Flags().StringVar(&gtBranch, "gt", "", "")
 
 	// Other flags
+	rootCmd.Flags().StringVar(&metricCmd, "metric", "", "")
 	rootCmd.Flags().StringVar(&preCmd, "pre", "", "")
 	rootCmd.Flags().StringVar(&postCmd, "post", "", "")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config-file", "", "")
@@ -114,7 +128,11 @@ func runRatchet(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	// Build configuration from flags and config file
-	cfg, err := buildConfig(args[0])
+	var metric string
+	if len(args) > 0 {
+		metric = args[0]
+	}
+	cfg, err := buildConfig(metric)
 	if err != nil {
 		if errors.ShouldSuppressHelp(err) {
 			cmd.SilenceUsage = true
@@ -140,7 +158,7 @@ func runRatchet(cmd *cobra.Command, args []string) error {
 	return err
 }
 
-func buildConfig(metricCmd string) (*config.Config, error) {
+func buildConfig(metricArg string) (*config.Config, error) {
 	// Initialize viper
 	v := viper.New()
 
@@ -203,8 +221,19 @@ func buildConfig(metricCmd string) (*config.Config, error) {
 		baseBranch = ltBranch
 	}
 
+	// Determine metric command from various sources
+	// Priority: positional arg > --metric flag > config
+	finalMetric := ""
+	if metricArg != "" {
+		finalMetric = metricArg
+	} else if metricCmd != "" {
+		finalMetric = metricCmd
+	} else if v.IsSet("metric") {
+		finalMetric = v.GetString("metric")
+	}
+
 	// Set values from flags
-	v.Set("metric-cmd", metricCmd)
+	v.Set("metric", finalMetric)
 	v.Set("verbose", verbose)
 	v.Set("greater-than", greaterThan)
 	v.Set("greater-than-or-equal", greaterThanOrEqual)
@@ -212,8 +241,8 @@ func buildConfig(metricCmd string) (*config.Config, error) {
 	v.Set("less-than-or-equal", lessThanOrEqual)
 	v.Set("less-than", lessThan)
 	v.Set("base-branch", baseBranch)
-	v.Set("pre-cmd", preCmd)
-	v.Set("post-cmd", postCmd)
+	v.Set("pre", preCmd)
+	v.Set("post", postCmd)
 
 	// Parse into config struct
 	var cfg config.Config

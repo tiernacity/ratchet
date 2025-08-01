@@ -11,9 +11,9 @@ import (
 type Config struct {
 	// Core settings
 	BaseBranch string `mapstructure:"base-branch"`
-	MetricCmd  string `mapstructure:"metric-cmd"`
-	PreCmd     string `mapstructure:"pre-cmd"`
-	PostCmd    string `mapstructure:"post-cmd"`
+	Metric     string `mapstructure:"metric"`
+	Pre        string `mapstructure:"pre"`
+	Post       string `mapstructure:"post"`
 
 	// Comparison operator (exactly one must be set)
 	Operator ComparisonOperator `mapstructure:"-"`
@@ -121,8 +121,8 @@ func (c *Config) Normalize() error {
 // Validate checks that the configuration is valid
 func (c *Config) Validate() error {
 	// Check required fields
-	if c.MetricCmd == "" {
-		return errors.NewValidationError("metric-cmd", "metric command is required")
+	if c.Metric == "" {
+		return errors.NewValidationError("metric", "metric command is required")
 	}
 
 	// Note: OpUnknown is valid for no-comparison mode
@@ -133,9 +133,9 @@ func (c *Config) Validate() error {
 	}
 
 	// Check for potentially dangerous commands (warning only)
-	_ = isDangerousCommand(c.MetricCmd) ||
-		(c.PreCmd != "" && isDangerousCommand(c.PreCmd)) ||
-		(c.PostCmd != "" && isDangerousCommand(c.PostCmd))
+	_ = isDangerousCommand(c.Metric) ||
+		(c.Pre != "" && isDangerousCommand(c.Pre)) ||
+		(c.Post != "" && isDangerousCommand(c.Post))
 	// This is just a warning, not an error
 	// The progress reporter will handle displaying warnings
 
