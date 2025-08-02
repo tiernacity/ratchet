@@ -132,7 +132,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "valid config",
 			config: Config{
-				Metric:  "echo 42",
+				Metric:     "echo 42",
 				BaseBranch: "main",
 				Operator:   OpGreaterThan,
 			},
@@ -149,8 +149,8 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "missing base branch with comparison operator",
 			config: Config{
-				Metric: "echo 42",
-				Operator:  OpGreaterThan,
+				Metric:   "echo 42",
+				Operator: OpGreaterThan,
 			},
 			wantErr: true,
 			errMsg:  "validation error: base-branch: base branch cannot be empty when using comparison operator",
@@ -158,15 +158,15 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "no-comparison mode valid",
 			config: Config{
-				Metric: "echo 42",
-				Operator:  OpUnknown,
+				Metric:   "echo 42",
+				Operator: OpUnknown,
 				// BaseBranch not required for no-comparison mode
 			},
 		},
 		{
 			name: "potentially dangerous command - rm",
 			config: Config{
-				Metric:  "rm -rf /tmp/test && echo 42",
+				Metric:     "rm -rf /tmp/test && echo 42",
 				BaseBranch: "main",
 				Operator:   OpGreaterThan,
 			},
@@ -175,7 +175,7 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "potentially dangerous command - delete",
 			config: Config{
-				Metric:  "delete-old-files.sh | wc -l",
+				Metric:     "delete-old-files.sh | wc -l",
 				BaseBranch: "main",
 				Operator:   OpGreaterThan,
 			},
