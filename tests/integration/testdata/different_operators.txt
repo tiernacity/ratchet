@@ -1,0 +1,52 @@
+# Test different comparison operators
+
+# Initialize git repo
+exec git init
+exec git config user.name "Test User"
+exec git config user.email "test@example.com"
+
+# Create main branch with 5 files only
+exec git checkout -b main
+exec git add file1.txt file2.txt file3.txt file4.txt file5.txt
+exec git commit -m 'main with 5 files'
+
+# Create feature branch with 7 files (improvement)
+exec git checkout -b feature
+exec git add file6.txt file7.txt
+exec git commit -m 'feature with 7 files'
+
+# Test greater-than (7 > 5) - use git ls-files to count tracked files
+exec ratchet --gt main 'git ls-files "*.txt" | wc -l'
+stdout 'Success: HEAD metric \(7\) is greater than main \(5\)'
+
+# Test greater-equal (7 >= 5)
+exec ratchet --ge main 'git ls-files "*.txt" | wc -l'
+stdout 'Success: HEAD metric \(7\) is greater than or equal to main \(5\)'
+
+# Test less-than should fail (7 < 5 is false)
+! exec ratchet --lt main 'git ls-files "*.txt" | wc -l'
+stderr 'Error: HEAD metric \(7\) is NOT less than main \(5\)'
+
+# Test equal-to should fail (7 == 5 is false)
+! exec ratchet --eq main 'git ls-files "*.txt" | wc -l'
+stderr 'Error: HEAD metric \(7\) is NOT equal to main \(5\)'
+
+# Switch to main and test equal with itself
+exec git checkout main
+exec ratchet --eq main 'git ls-files "*.txt" | wc -l'
+stdout 'Success: HEAD metric \(5\) is equal to main \(5\)'
+
+-- file1.txt --
+content
+-- file2.txt --
+content
+-- file3.txt --
+content
+-- file4.txt --
+content
+-- file5.txt --
+content
+-- file6.txt --
+content
+-- file7.txt --
+content

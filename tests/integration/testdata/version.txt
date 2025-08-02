@@ -1,0 +1,4 @@
+# Test that ratchet --version works
+exec ratchet --version
+stdout 'dev'
+! stderr .

@@ -51,10 +51,10 @@ func (o *orchestrator) Run(ctx context.Context, cfg *config.Config) error {
 
 	// Build phases list based on configuration
 	phases := []string{"metric"}
-	if cfg.PreCmd != "" {
+	if cfg.Pre != "" {
 		phases = append([]string{"pre"}, phases...)
 	}
-	if cfg.PostCmd != "" {
+	if cfg.Post != "" {
 		phases = append(phases, "post")
 	}
 
@@ -96,14 +96,14 @@ func (o *orchestrator) Run(ctx context.Context, cfg *config.Config) error {
 // runNoComparison runs just the metric command and outputs the result
 func (o *orchestrator) runNoComparison(ctx context.Context, cfg *config.Config) error {
 	// Run pre-command if specified
-	if cfg.PreCmd != "" {
-		if _, err := o.executor.Execute(ctx, ".", cfg.PreCmd); err != nil {
+	if cfg.Pre != "" {
+		if _, err := o.executor.Execute(ctx, ".", cfg.Pre); err != nil {
 			return errors.NewPhaseErrorFromExecutorError("pre-command", "HEAD", err)
 		}
 	}
 
 	// Run metric command
-	output, err := o.executor.Execute(ctx, ".", cfg.MetricCmd)
+	output, err := o.executor.Execute(ctx, ".", cfg.Metric)
 	if err != nil {
 		return errors.NewPhaseErrorFromExecutorError("metric command", "HEAD", err)
 	}
@@ -115,8 +115,8 @@ func (o *orchestrator) runNoComparison(ctx context.Context, cfg *config.Config) 
 	}
 
 	// Run post-command if specified
-	if cfg.PostCmd != "" {
-		if _, err := o.executor.Execute(ctx, ".", cfg.PostCmd); err != nil {
+	if cfg.Post != "" {
+		if _, err := o.executor.Execute(ctx, ".", cfg.Post); err != nil {
 			return errors.NewPhaseErrorFromExecutorError("post-command", "HEAD", err)
 		}
 	}
@@ -129,9 +129,9 @@ func (o *orchestrator) runNoComparison(ctx context.Context, cfg *config.Config) 
 // runMetricSequence executes pre/metric/post commands for a single branch
 func (o *orchestrator) runMetricSequence(ctx context.Context, cfg *config.Config, dir, branchName string) (float64, error) {
 	// Run pre-command if specified
-	if cfg.PreCmd != "" {
+	if cfg.Pre != "" {
 		o.reporter.UpdateBranch(branchName, "pre", false)
-		if _, err := o.executor.Execute(ctx, dir, cfg.PreCmd); err != nil {
+		if _, err := o.executor.Execute(ctx, dir, cfg.Pre); err != nil {
 			return 0, errors.NewPhaseErrorFromExecutorError("pre-command", branchName, err)
 		}
 		o.reporter.UpdateBranch(branchName, "pre", true)
@@ -139,7 +139,7 @@ func (o *orchestrator) runMetricSequence(ctx context.Context, cfg *config.Config
 
 	// Run metric command
 	o.reporter.UpdateBranch(branchName, "metric", false)
-	output, err := o.executor.Execute(ctx, dir, cfg.MetricCmd)
+	output, err := o.executor.Execute(ctx, dir, cfg.Metric)
 	if err != nil {
 		return 0, errors.NewPhaseErrorFromExecutorError("metric command", branchName, err)
 	}
@@ -152,9 +152,9 @@ func (o *orchestrator) runMetricSequence(ctx context.Context, cfg *config.Config
 	o.reporter.UpdateBranch(branchName, "metric", true)
 
 	// Run post-command if specified
-	if cfg.PostCmd != "" {
+	if cfg.Post != "" {
 		o.reporter.UpdateBranch(branchName, "post", false)
-		if _, err := o.executor.Execute(ctx, dir, cfg.PostCmd); err != nil {
+		if _, err := o.executor.Execute(ctx, dir, cfg.Post); err != nil {
 			return 0, errors.NewPhaseErrorFromExecutorError("post-command", branchName, err)
 		}
 		o.reporter.UpdateBranch(branchName, "post", true)

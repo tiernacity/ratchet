@@ -1,0 +1,41 @@
+# Test basic metric comparison scenarios
+# Set up a git repository with different metrics on different branches
+
+# Initialize git repo
+exec git init
+exec git config user.name "Test User"
+exec git config user.email "test@example.com"
+
+# Create initial file with 3 todos
+exec git checkout -b main
+exec git add code.txt
+exec git commit -m 'initial commit'
+
+# Create feature branch with 2 todos (improvement)
+exec git checkout -b feature
+cp code-feature.txt code.txt
+exec git add code.txt
+exec git commit -m 'removed one todo'
+
+# Test that fewer TODOs passes with less-than comparison
+exec ratchet --lt main 'grep -c TODO code.txt'
+stdout 'Success: HEAD metric \(2\) is less than main \(3\)'
+
+# Test the reverse (should fail)  
+exec git checkout main
+! exec ratchet --lt feature 'grep -c TODO code.txt'
+stderr 'Error: HEAD metric \(3\) is NOT less than feature \(2\)'
+
+-- code.txt --
+line 1
+TODO: fix this
+line 3
+TODO: improve this
+line 5
+TODO: optimize this
+-- code-feature.txt --
+line 1
+TODO: fix this
+line 3
+line 5
+TODO: optimize this

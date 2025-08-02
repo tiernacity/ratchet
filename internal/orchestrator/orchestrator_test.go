@@ -119,7 +119,7 @@ func TestOrchestrator_Run_Success(t *testing.T) {
 
 	cfg := &config.Config{
 		BaseBranch: "main",
-		MetricCmd:  "echo 42",
+		Metric:     "echo 42",
 		Operator:   config.OpGreaterThan,
 	}
 
@@ -163,7 +163,7 @@ func TestOrchestrator_Run_MetricTestFailure(t *testing.T) {
 
 	cfg := &config.Config{
 		BaseBranch: "main",
-		MetricCmd:  "echo 42",
+		Metric:     "echo 42",
 		Operator:   config.OpGreaterThan,
 	}
 
@@ -193,8 +193,8 @@ func TestOrchestrator_Run_NoComparison(t *testing.T) {
 	reporter.On("NoComparison", 42.0)
 
 	cfg := &config.Config{
-		MetricCmd: "echo 42",
-		Operator:  config.OpUnknown, // No comparison
+		Metric:   "echo 42",
+		Operator: config.OpUnknown, // No comparison
 	}
 
 	orchestrator := New(git, executor, parser, reporter, "/tmp")
@@ -256,9 +256,9 @@ func TestOrchestrator_Run_WithPreAndPostCommands(t *testing.T) {
 
 	cfg := &config.Config{
 		BaseBranch: "main",
-		PreCmd:     "setup.sh",
-		MetricCmd:  "echo 42",
-		PostCmd:    "cleanup.sh",
+		Pre:        "setup.sh",
+		Metric:     "echo 42",
+		Post:       "cleanup.sh",
 		Operator:   config.OpGreaterThan,
 		Verbose:    true,
 	}
@@ -283,7 +283,7 @@ func TestOrchestrator_Run_GitRepositoryError(t *testing.T) {
 
 	cfg := &config.Config{
 		BaseBranch: "main",
-		MetricCmd:  "echo 42",
+		Metric:     "echo 42",
 		Operator:   config.OpGreaterThan,
 	}
 
@@ -306,7 +306,7 @@ func TestOrchestrator_Run_BranchNotFound(t *testing.T) {
 
 	cfg := &config.Config{
 		BaseBranch: "nonexistent",
-		MetricCmd:  "echo 42",
+		Metric:     "echo 42",
 		Operator:   config.OpGreaterThan,
 	}
 

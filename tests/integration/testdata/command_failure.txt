@@ -1,0 +1,30 @@
+# Test that ratchet handles command failures gracefully
+
+# Initialize git repo
+exec git init
+exec git config user.name "Test User"
+exec git config user.email "test@example.com"
+
+# Create a branch with some content
+exec git checkout -b main
+exec git add file.txt
+exec git commit -m 'initial commit'
+
+# Create feature branch with a change
+exec git checkout -b feature
+cp file-changed.txt file.txt
+exec git add file.txt
+exec git commit -m 'feature change'
+
+# Test with a command that fails
+! exec ratchet --lt main 'nonexistent-command'
+stderr 'Error: metric command in main: exit code exit status 127'
+
+# Test with a command that succeeds but returns non-numeric output
+! exec ratchet --lt main 'echo "not a number"'
+stderr 'no numeric value found'
+
+-- file.txt --
+Some content here
+-- file-changed.txt --
+Some different content here
