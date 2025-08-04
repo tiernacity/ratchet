@@ -6,11 +6,12 @@ This document defines the exact output formatting requirements for consistent us
 
 ### stdout
 - Progress indicators (verbose mode only)
-- Success/failure status messages
+- Success status messages (`Success: ...`)
 - Metric values (when no comparison is performed)
 
 ### stderr
-- Error messages
+- Error messages (`Error: ...`)
+- Failure status messages (`Failure: ...`)
 - Help text (for configuration errors only)
 
 ## Progress Display (Verbose Mode Only)
@@ -46,7 +47,7 @@ HEAD:        pre [x] ; metric [ ] ; post [ ]
 
 ### Standard Mode
 ```
-HEAD metric (5) is greater than origin/main (4)
+Success: HEAD metric (5) is greater than origin/main (4)
 ```
 
 ### No Comparison Mode
@@ -59,7 +60,7 @@ When no operator is specified, output only the metric value:
 
 ### Metric Test Failures
 ```
-HEAD metric (5) is NOT greater than origin/main (6)
+Failure: HEAD metric (5) is NOT greater than origin/main (6)
 ```
 
 ### Format Rules
@@ -88,7 +89,7 @@ Error: failed to create worktree for main
 ```
 Error: command 'npm test' not found
 Error: metric command failed with exit code 1
-Error: pre-command in main: exit code 1
+Error: pre-command failed with exit code 1
 ```
 
 #### Configuration Errors
@@ -131,7 +132,7 @@ const (
 ### Successful Run (Standard)
 ```bash
 $ ratchet --lt main "grep -c TODO *.go"
-HEAD metric (5) is less than main (8)
+Success: HEAD metric (5) is less than main (8)
 ```
 
 ### Successful Run (Verbose)
@@ -140,13 +141,13 @@ $ ratchet --lt main --verbose "grep -c TODO *.go"
 main:        metric [x]
 HEAD:        metric [x]
 
-HEAD metric (5) is less than main (8)
+Success: HEAD metric (5) is less than main (8)
 ```
 
 ### Failed Run
 ```bash
 $ ratchet --lt main "grep -c TODO *.go"
-HEAD metric (10) is NOT less than main (8)
+Failure: HEAD metric (10) is NOT less than main (8)
 ```
 
 ### Command Failure
@@ -176,7 +177,7 @@ func TestOutputFormat(t *testing.T) {
         // Run ratchet command
     })
     
-    expected := "HEAD metric (10) is greater than main (5)"
+    expected := "Success: HEAD metric (10) is greater than main (5)"
     assert.Contains(t, stdout, expected)
     assert.Empty(t, stderr)
 }
@@ -195,10 +196,14 @@ func (m *mockProgressReporter) UpdateProgress(branch, line string) {
 
 ## Consistency Rules
 
-1. **Metric Precision**: Display integers as integers, floats with minimal necessary precision
-2. **Branch Names**: Use exactly as provided by user (don't normalize origin/main vs main)
-3. **Command Names**: Show actual commands in error messages, not simplified names
-4. **Error Context**: Include relevant context (branch, command, phase) but avoid redundancy
-5. **Status Indicators**: Use consistent checkbox format `[x]` and `[ ]`
+1. **Message Prefixes**: 
+   - Success messages: `Success: ` (stdout)
+   - Failure messages: `Failure: ` (stderr) 
+   - Error messages: `Error: ` (stderr)
+2. **Metric Precision**: Display integers as integers, floats with minimal necessary precision
+3. **Branch Names**: Use exactly as provided by user (don't normalize origin/main vs main)
+4. **Command Names**: Show actual commands in error messages, not simplified names
+5. **Error Simplicity**: Keep error messages concise without excessive context
+6. **Status Indicators**: Use consistent checkbox format `[x]` and `[ ]`
 
 This specification ensures consistent user experience and makes the tool's behavior predictable across different environments and use cases.
