@@ -2,6 +2,7 @@ package errors
 
 import (
 	"fmt"
+	"strings"
 )
 
 // RatchetError is the base interface for all ratchet errors
@@ -34,7 +35,7 @@ type ValidationError struct {
 }
 
 func (e *ValidationError) Error() string {
-	return fmt.Sprintf("validation error: %s: %s", e.Field, e.Message)
+	return e.Message
 }
 
 func (e *ValidationError) ExitCode() int {
@@ -48,7 +49,7 @@ type GitError struct {
 }
 
 func (e *GitError) Error() string {
-	return fmt.Sprintf("git %s: %v", e.Operation, e.Wrapped)
+	return fmt.Sprintf("%v", e.Wrapped)
 }
 
 func (e *GitError) ExitCode() int {
@@ -72,13 +73,14 @@ func (e *CancelledError) ExitCode() int {
 
 // PhaseError represents a command execution failure in a specific phase and branch
 type PhaseError struct {
-	Phase  string // "pre-command", "metric command", "post-command"
-	Branch string // branch name
-	Reason string // concise reason for failure
+	Phase   string // "pre", "metric", "post"
+	Branch  string // branch name
+	Command string // the command that failed
+	Reason  string // concise reason for failure
 }
 
 func (e *PhaseError) Error() string {
-	return fmt.Sprintf("%s in %s: %s", e.Phase, e.Branch, e.Reason)
+	return fmt.Sprintf("%s '%s' %s", e.Phase, e.Command, e.Reason)
 }
 
 func (e *PhaseError) ExitCode() int {
@@ -114,7 +116,11 @@ type ParseError struct {
 }
 
 func (e *ParseError) Error() string {
-	return fmt.Sprintf("invalid metric output '%s': %v", e.Output, e.Wrapped)
+	cleanOutput := strings.TrimSpace(e.Output)
+	if cleanOutput == "" {
+		return "no metric output provided"
+	}
+	return fmt.Sprintf("invalid metric output '%s': %v", cleanOutput, e.Wrapped)
 }
 
 func (e *ParseError) ExitCode() int {
@@ -123,4 +129,17 @@ func (e *ParseError) ExitCode() int {
 
 func (e *ParseError) Unwrap() error {
 	return e.Wrapped
+}
+
+// ExitError is used to return a specific exit code without showing an error message
+type ExitError struct {
+	Code int
+}
+
+func (e *ExitError) Error() string {
+	return "" // Empty message to prevent double output
+}
+
+func (e *ExitError) ExitCode() int {
+	return e.Code
 }

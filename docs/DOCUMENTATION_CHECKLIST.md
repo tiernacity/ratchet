@@ -5,27 +5,27 @@ This checklist should be reviewed whenever making code changes to ensure documen
 ## When to Update Documentation
 
 ### Always Update When:
-- [ ] **Adding/removing error types** → Update `docs/features/error-handling.md`
-- [ ] **Changing interfaces** → Update `DESIGN.md` and relevant feature docs
-- [ ] **Adding/removing modules** → Update `DESIGN.md` directory structure
-- [ ] **Changing CLI flags/options** → Update `README.md` CLI Options section
-- [ ] **Modifying error messages** → Update error examples in documentation
-- [ ] **Changing exit codes** → Update exit code tables
-- [ ] **Adding/removing dependencies** → Update `CLAUDE.md` dependencies section
+- [ ] **Adding/removing error types** → Update `docs/DESIGN_PATTERNS.md`
+- [ ] **Changing interfaces** → Update `docs/DESIGN_PATTERNS.md` and `docs/IMPLEMENTATION_NOTES.md`
+- [ ] **Adding/removing modules** → Update `docs/IMPLEMENTATION_NOTES.md` code organization section
+- [ ] **Changing CLI flags/options** → Update `README.md` CLI Options section and `docs/IMPLEMENTATION_NOTES.md`
+- [ ] **Modifying error/output messages** → Update `docs/OUTPUT_SPECIFICATION.md`
+- [ ] **Changing exit codes** → Update `docs/DESIGN_PATTERNS.md` exit code table
+- [ ] **Adding/removing dependencies** → Update `CLAUDE.md` and `docs/IMPLEMENTATION_NOTES.md`
 
 ## Documentation Files to Check
 
 ### Core Documentation
-- [ ] `DESIGN.md` - Architecture, modules, interfaces, execution flow
-- [ ] `README.md` - User-facing documentation, examples, CLI options
+- [ ] `README.md` - User-facing documentation, examples, CLI options, troubleshooting
 - [ ] `CLAUDE.md` - Development guidelines, patterns, commands
+- [ ] `DESIGN.md` - High-level architecture and module overview (if present)
 
-### Feature Documentation
-- [ ] `docs/features/error-handling.md` - Error types, exit codes, help behavior
-- [ ] `docs/features/git-operations.md` - Git worktree management
-- [ ] `docs/features/command-execution.md` - Command executor behavior
-- [ ] `docs/features/metric-parsing.md` - Parser rules and examples
-- [ ] `docs/features/configuration.md` - Config structure and validation
+### Developer Documentation
+- [ ] `docs/DESIGN_PATTERNS.md` - Error handling patterns, orchestration, testing strategies
+- [ ] `docs/OUTPUT_SPECIFICATION.md` - Output formats, message specifications, user experience
+- [ ] `docs/IMPLEMENTATION_NOTES.md` - Technical constraints, interfaces, platform considerations
+- [ ] `docs/ERROR_HANDLING_GUIDE.md` - Best practices guide for Go error handling
+- [ ] `docs/DOCUMENTATION_CHECKLIST.md` - This checklist (update when documentation structure changes)
 
 ## Update Process
 
@@ -52,24 +52,30 @@ This checklist should be reviewed whenever making code changes to ensure documen
 ## Common Patterns to Document
 
 ### Error Handling Changes
-- Error type definitions
-- Error creation patterns (New* vs Wrap*)
-- Exit code mappings
-- Help display behavior
-- Error message formats
+- Error type definitions → `docs/DESIGN_PATTERNS.md`
+- Error creation patterns (New* vs Wrap*) → `docs/DESIGN_PATTERNS.md`
+- Exit code mappings → `docs/DESIGN_PATTERNS.md`
+- Help display behavior → `docs/DESIGN_PATTERNS.md`
+- Error message formats → `docs/OUTPUT_SPECIFICATION.md`
 
 ### Interface Changes
-- Method signatures
-- Parameter types
-- Return values
-- New methods added
-- Methods removed
+- Method signatures → `docs/IMPLEMENTATION_NOTES.md`
+- Parameter types → `docs/IMPLEMENTATION_NOTES.md`
+- Return values → `docs/IMPLEMENTATION_NOTES.md`
+- New methods added → `docs/IMPLEMENTATION_NOTES.md`
+- Methods removed → `docs/IMPLEMENTATION_NOTES.md`
 
 ### CLI Changes
-- New flags/options
-- Changed flag behavior
-- New commands/subcommands
-- Changed validation rules
+- New flags/options → `README.md` + `docs/IMPLEMENTATION_NOTES.md`
+- Changed flag behavior → `README.md` + `docs/IMPLEMENTATION_NOTES.md`
+- New commands/subcommands → `README.md` + `docs/IMPLEMENTATION_NOTES.md`
+- Changed validation rules → `docs/IMPLEMENTATION_NOTES.md`
+
+### Output Changes
+- Success/failure message formats → `docs/OUTPUT_SPECIFICATION.md`
+- Progress display changes → `docs/OUTPUT_SPECIFICATION.md`
+- Error message wording → `docs/OUTPUT_SPECIFICATION.md`
+- ANSI/formatting changes → `docs/OUTPUT_SPECIFICATION.md`
 
 ## Documentation Quality Checks
 
@@ -79,6 +85,17 @@ This checklist should be reviewed whenever making code changes to ensure documen
 - [ ] CLI examples produce expected results
 - [ ] No references to removed features
 - [ ] All new features are documented
+
+## Current Documentation Structure
+
+After consolidation, the documentation is organized as:
+
+- **User Documentation**: `README.md` (installation, usage, examples, troubleshooting)
+- **Developer Onboarding**: `CLAUDE.md` (development setup, commands, patterns)
+- **Design Authority**: `docs/DESIGN_PATTERNS.md` (error handling, orchestration, testing)
+- **Output Authority**: `docs/OUTPUT_SPECIFICATION.md` (user experience, message formats)
+- **Technical Reference**: `docs/IMPLEMENTATION_NOTES.md` (interfaces, constraints, platform)
+- **Best Practices**: `docs/ERROR_HANDLING_GUIDE.md` (Go error handling guidance)
 
 ## Reminder
 

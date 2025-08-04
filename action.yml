@@ -1,42 +1,42 @@
-name: 'Ratchet'
-description: 'Ensure your code metrics only improve over time'
-author: 'Tiernacity'
+name: "Ratchet"
+description: "Ensure your code metrics only improve over time"
+author: "Tiernacity"
 branding:
-  icon: 'check-circle'
-  color: 'green'
+  icon: "check-circle"
+  color: "green"
 
 inputs:
   metric:
-    description: 'Command to run that outputs a number'
+    description: "Command to run that outputs a number"
     required: true
   pre:
-    description: 'Command to run before metric command'
+    description: "Command to run before metric command"
     required: false
   post:
-    description: 'Command to run after metric command'
+    description: "Command to run after metric command"
     required: false
   lt:
-    description: 'Base ref for less-than comparison'
+    description: "Base ref for less-than comparison"
     required: false
   le:
-    description: 'Base ref for less-equal comparison'
+    description: "Base ref for less-equal comparison"
     required: false
   eq:
-    description: 'Base ref for equal-to comparison'
+    description: "Base ref for equal-to comparison"
     required: false
   ge:
-    description: 'Base ref for greater-equal comparison'
+    description: "Base ref for greater-equal comparison"
     required: false
   gt:
-    description: 'Base ref for greater-than comparison'
+    description: "Base ref for greater-than comparison"
     required: false
   verbose:
-    description: 'Show detailed output'
+    description: "Show detailed output"
     required: false
-    default: 'false'
+    default: "false"
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Determine execution mode
       id: mode
@@ -45,9 +45,10 @@ runs:
         ACTION_REF: ${{ github.action_ref }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
+        # Examine environment to determine execution mode
         echo "Action ref: $ACTION_REF"
         echo "Action path: $ACTION_PATH"
-        
+
         # Check if running from source (uses: ./)
         if [[ -z "$ACTION_REF" ]] && [[ -f "$ACTION_PATH/go.mod" ]]; then
           echo "Running from source"
@@ -55,7 +56,7 @@ runs:
         else
           echo "Running from release"
           echo "mode=binary" >> $GITHUB_OUTPUT
-          
+
           # Determine version from action ref
           if [[ "$ACTION_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.+)?$ ]]; then
             # Tagged version (e.g., v1.0.0 or v0.1.0-alpha.1)
@@ -69,24 +70,26 @@ runs:
             echo "Please use a tagged version (e.g., @v1.0.0) or @main"
             exit 1
           fi
-          
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         fi
-    
+
     - name: Setup Go (source mode)
       if: steps.mode.outputs.mode == 'source'
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version-file: ${{ github.action_path }}/go.mod
-    
+        cache: false
+
     - name: Download ratchet (binary mode)
       if: steps.mode.outputs.mode == 'binary'
       shell: bash
       run: |
+        # Download ratchet binary
         # Determine OS and architecture
         OS=$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')
         ARCH=$(uname -m)
-        
+
         # Map architecture names
         case $ARCH in
           x86_64)
@@ -96,27 +99,27 @@ runs:
             ARCH="arm64"
             ;;
         esac
-        
+
         # Set archive name (GoReleaser format)
         VERSION="${{ steps.mode.outputs.version }}"
         # Strip 'v' prefix for archive name
         VERSION_NO_V="${VERSION#v}"
         ARCHIVE_NAME="ratchet_${VERSION_NO_V}_${OS}_${ARCH}"
-        
+
         # Determine archive extension
         if [[ "$OS" == "windows" ]]; then
           ARCHIVE_EXT="zip"
         else
           ARCHIVE_EXT="tar.gz"
         fi
-        
+
         ARCHIVE_FILE="${ARCHIVE_NAME}.${ARCHIVE_EXT}"
-        
+
         # Download archive
         URL="https://github.com/tiernacity/ratchet/releases/download/${{ steps.mode.outputs.version }}/${ARCHIVE_FILE}"
         echo "Downloading ratchet from $URL"
         curl -LO "$URL"
-        
+
         # Extract archive
         mkdir -p ratchet-extract
         if [[ "$OS" == "windows" ]]; then
@@ -124,34 +127,36 @@ runs:
         else
           tar -xzf "$ARCHIVE_FILE" -C ratchet-extract
         fi
-        
+
         # Find the binary (may be in root or subdirectory)
         BINARY_PATH=$(find ratchet-extract -name "ratchet*" -type f -executable | head -1)
         if [[ -z "$BINARY_PATH" ]]; then
           echo "Error: Could not find ratchet binary in archive"
           exit 1
         fi
-        
+
         # Move to standard location
         mkdir -p "$HOME/.local/bin"
         mv "$BINARY_PATH" "$HOME/.local/bin/ratchet"
-        
+
         # Make sure it's executable
         chmod +x "$HOME/.local/bin/ratchet"
-        
+
         # Clean up
         rm -rf ratchet-extract "$ARCHIVE_FILE"
-        
+
         # Add to PATH
         echo "$HOME/.local/bin" >> $GITHUB_PATH
-    
+
     - name: Run ratchet
       shell: bash
       run: |
-        # Convert inputs to JSON config
-        CONFIG='${{ toJSON(inputs) }}'
-        
-        # Run based on mode
+        # Construct config and execute ratchet
+        CONFIG=$(cat <<'EOF'
+        ${{ toJSON(inputs) }}
+        EOF
+        )
+
         if [[ "${{ steps.mode.outputs.mode }}" == "source" ]]; then
           cd "${{ github.action_path }}"
           go run ./cmd/ratchet --config "$CONFIG"

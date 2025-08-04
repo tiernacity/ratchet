@@ -27,13 +27,13 @@ func TestErrorCreationHelpers(t *testing.T) {
 			name:     "validation error",
 			err:      NewValidationError("metric-cmd", "cannot be empty"),
 			wantCode: 2,
-			wantMsg:  "validation error: metric-cmd: cannot be empty",
+			wantMsg:  "cannot be empty",
 		},
 		{
 			name:     "git error",
 			err:      WrapGitError("checkout", fmt.Errorf("branch not found")),
 			wantCode: 2,
-			wantMsg:  "git checkout: branch not found",
+			wantMsg:  "branch not found",
 		},
 		{
 			name:     "command error",
@@ -55,9 +55,9 @@ func TestErrorCreationHelpers(t *testing.T) {
 		},
 		{
 			name:     "phase error",
-			err:      NewPhaseError("pre-command", "main", "exit code 1"),
+			err:      NewPhaseError("pre", "main", "setup-test", "exit code 1"),
 			wantCode: 2,
-			wantMsg:  "pre-command in main: exit code 1",
+			wantMsg:  "pre 'setup-test' exit code 1",
 		},
 		{
 			name:     "cancelled error",
@@ -163,17 +163,17 @@ func TestExtractConciseReason(t *testing.T) {
 		{
 			name: "exit error",
 			err:  &exec.ExitError{ProcessState: processState},
-			want: "exit code " + processState.String(),
+			want: "command failed",
 		},
 		{
 			name: "exec error not found",
 			err:  &exec.Error{Name: "npm", Err: exec.ErrNotFound},
-			want: "npm not found",
+			want: "command 'npm' not found",
 		},
 		{
 			name: "exec error other",
 			err:  &exec.Error{Name: "test", Err: fmt.Errorf("permission denied")},
-			want: "failed to start test: permission denied",
+			want: "failed to start 'test': permission denied",
 		},
 		{
 			name: "syscall ENOENT",
@@ -213,39 +213,43 @@ func TestNewPhaseErrorFromExecutorError(t *testing.T) {
 		name     string
 		phase    string
 		branch   string
+		command  string
 		err      error
 		wantType string
 		wantMsg  string
 	}{
 		{
 			name:     "cancellation returns CancelledError",
-			phase:    "pre-command",
+			phase:    "pre",
 			branch:   "main",
+			command:  "setup",
 			err:      fmt.Errorf("cancelled"),
 			wantType: "*errors.CancelledError",
 			wantMsg:  "cancelled",
 		},
 		{
 			name:     "exit error returns PhaseError",
-			phase:    "metric command",
+			phase:    "metric",
 			branch:   "origin/main",
+			command:  "false",
 			err:      &exec.ExitError{ProcessState: processState},
 			wantType: "*errors.PhaseError",
-			wantMsg:  "metric command in origin/main: exit code " + processState.String(),
+			wantMsg:  "metric 'false' command failed",
 		},
 		{
 			name:     "exec error not found returns PhaseError",
-			phase:    "pre-command",
+			phase:    "pre",
 			branch:   "main",
+			command:  "npm install",
 			err:      &exec.Error{Name: "npm", Err: exec.ErrNotFound},
 			wantType: "*errors.PhaseError",
-			wantMsg:  "pre-command in main: npm not found",
+			wantMsg:  "pre 'npm install' command 'npm' not found",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewPhaseErrorFromExecutorError(tt.phase, tt.branch, tt.err)
+			got := NewPhaseErrorFromExecutorError(tt.phase, tt.branch, tt.command, tt.err)
 			assert.Equal(t, tt.wantMsg, got.Error())
 			assert.Contains(t, fmt.Sprintf("%T", got), tt.wantType)
 		})

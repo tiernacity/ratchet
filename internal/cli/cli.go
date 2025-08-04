@@ -4,6 +4,7 @@ package cli
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -152,8 +153,19 @@ func runRatchet(cmd *cobra.Command, args []string) error {
 
 	// Run the orchestrator
 	err = orch.Run(ctx, cfg)
-	if err != nil && errors.ShouldSuppressHelp(err) {
-		cmd.SilenceUsage = true
+	if err != nil {
+		// Handle MetricTestError specially - report via progress reporter and return with exit code 1
+		var metricErr *errors.MetricTestError
+		if stderrors.As(err, &metricErr) {
+			progressReporter.Failure(metricErr.Current, metricErr.Base, metricErr.Operator, metricErr.Branch)
+			cmd.SilenceUsage = true
+			// Use os.Exit instead of returning an error to avoid Cobra's error output
+			os.Exit(1)
+		}
+
+		if errors.ShouldSuppressHelp(err) {
+			cmd.SilenceUsage = true
+		}
 	}
 	return err
 }
@@ -184,41 +196,26 @@ func buildConfig(metricArg string) (*config.Config, error) {
 		}
 	}
 
-	// Determine which operator was used and set corresponding flags
-	var baseBranch string
-	var greaterThan, greaterThanOrEqual, equal, lessThanOrEqual, lessThan bool
-
+	// Check for multiple operators specified
+	operatorCount := 0
 	if gtBranch != "" {
-		greaterThan = true
-		baseBranch = gtBranch
+		operatorCount++
 	}
 	if geBranch != "" {
-		if baseBranch != "" {
-			return nil, errors.NewValidationError("operators", "multiple comparison operators specified")
-		}
-		greaterThanOrEqual = true
-		baseBranch = geBranch
+		operatorCount++
 	}
 	if eqBranch != "" {
-		if baseBranch != "" {
-			return nil, errors.NewValidationError("operators", "multiple comparison operators specified")
-		}
-		equal = true
-		baseBranch = eqBranch
+		operatorCount++
 	}
 	if leBranch != "" {
-		if baseBranch != "" {
-			return nil, errors.NewValidationError("operators", "multiple comparison operators specified")
-		}
-		lessThanOrEqual = true
-		baseBranch = leBranch
+		operatorCount++
 	}
 	if ltBranch != "" {
-		if baseBranch != "" {
-			return nil, errors.NewValidationError("operators", "multiple comparison operators specified")
-		}
-		lessThan = true
-		baseBranch = ltBranch
+		operatorCount++
+	}
+
+	if operatorCount > 1 {
+		return nil, errors.NewValidationError("operators", "multiple comparison operators specified")
 	}
 
 	// Determine metric command from various sources
@@ -235,12 +232,11 @@ func buildConfig(metricArg string) (*config.Config, error) {
 	// Set values from flags
 	v.Set("metric", finalMetric)
 	v.Set("verbose", verbose)
-	v.Set("greater-than", greaterThan)
-	v.Set("greater-than-or-equal", greaterThanOrEqual)
-	v.Set("equal", equal)
-	v.Set("less-than-or-equal", lessThanOrEqual)
-	v.Set("less-than", lessThan)
-	v.Set("base-branch", baseBranch)
+	v.Set("greater-than", gtBranch)
+	v.Set("greater-than-or-equal", geBranch)
+	v.Set("equal", eqBranch)
+	v.Set("less-than-or-equal", leBranch)
+	v.Set("less-than", ltBranch)
 	v.Set("pre", preCmd)
 	v.Set("post", postCmd)
 

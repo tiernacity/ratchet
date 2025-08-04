@@ -24,7 +24,7 @@ stdout 'Success: HEAD metric \(2\) is less than main \(3\)'
 # Test the reverse (should fail)  
 exec git checkout main
 ! exec ratchet --lt feature 'grep -c TODO code.txt'
-stderr 'Error: HEAD metric \(3\) is NOT less than feature \(2\)'
+stderr 'Failure: HEAD metric \(3\) is NOT less than feature \(2\)'
 
 -- code.txt --
 line 1

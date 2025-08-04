@@ -10,7 +10,7 @@ import (
 // Config represents the complete application configuration
 type Config struct {
 	// Core settings
-	BaseBranch string `mapstructure:"base-branch"`
+	BaseBranch string `mapstructure:"-"` // Set automatically from operator fields
 	Metric     string `mapstructure:"metric"`
 	Pre        string `mapstructure:"pre"`
 	Post       string `mapstructure:"post"`
@@ -18,12 +18,20 @@ type Config struct {
 	// Comparison operator (exactly one must be set)
 	Operator ComparisonOperator `mapstructure:"-"`
 
-	// CLI flags for operators (used for parsing)
-	GreaterThan        bool `mapstructure:"greater-than"`
-	GreaterThanOrEqual bool `mapstructure:"greater-than-or-equal"`
-	Equal              bool `mapstructure:"equal"`
-	LessThanOrEqual    bool `mapstructure:"less-than-or-equal"`
-	LessThan           bool `mapstructure:"less-than"`
+	// CLI flags for operators (used for parsing) - all contain branch names
+	GreaterThan        string `mapstructure:"greater-than"`
+	GreaterThanOrEqual string `mapstructure:"greater-than-or-equal"`
+	Equal              string `mapstructure:"equal"`
+	LessThanOrEqual    string `mapstructure:"less-than-or-equal"`
+	LessThan           string `mapstructure:"less-than"`
+
+	// Short name aliases for operators (for GitHub Action and convenience)
+	// These contain the branch name as their value
+	Gt string `mapstructure:"gt"`
+	Ge string `mapstructure:"ge"`
+	Eq string `mapstructure:"eq"`
+	Le string `mapstructure:"le"`
+	Lt string `mapstructure:"lt"`
 
 	// Other settings
 	ConfigFile string `mapstructure:"-"`
@@ -84,24 +92,57 @@ func (op ComparisonOperator) HumanString() string {
 func (c *Config) Normalize() error {
 	count := 0
 
-	if c.GreaterThan {
+	// Check long form flags
+	if c.GreaterThan != "" {
 		c.Operator = OpGreaterThan
+		c.BaseBranch = c.GreaterThan
 		count++
 	}
-	if c.GreaterThanOrEqual {
+	if c.GreaterThanOrEqual != "" {
 		c.Operator = OpGreaterThanOrEqual
+		c.BaseBranch = c.GreaterThanOrEqual
 		count++
 	}
-	if c.Equal {
+	if c.Equal != "" {
 		c.Operator = OpEqual
+		c.BaseBranch = c.Equal
 		count++
 	}
-	if c.LessThanOrEqual {
+	if c.LessThanOrEqual != "" {
 		c.Operator = OpLessThanOrEqual
+		c.BaseBranch = c.LessThanOrEqual
 		count++
 	}
-	if c.LessThan {
+	if c.LessThan != "" {
 		c.Operator = OpLessThan
+		c.BaseBranch = c.LessThan
+		count++
+	}
+
+	// Check short form flags
+	if c.Gt != "" {
+		c.Operator = OpGreaterThan
+		c.BaseBranch = c.Gt
+		count++
+	}
+	if c.Ge != "" {
+		c.Operator = OpGreaterThanOrEqual
+		c.BaseBranch = c.Ge
+		count++
+	}
+	if c.Eq != "" {
+		c.Operator = OpEqual
+		c.BaseBranch = c.Eq
+		count++
+	}
+	if c.Le != "" {
+		c.Operator = OpLessThanOrEqual
+		c.BaseBranch = c.Le
+		count++
+	}
+	if c.Lt != "" {
+		c.Operator = OpLessThan
+		c.BaseBranch = c.Lt
 		count++
 	}
 

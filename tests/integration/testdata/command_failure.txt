@@ -18,7 +18,7 @@ exec git commit -m 'feature change'
 
 # Test with a command that fails
 ! exec ratchet --lt main 'nonexistent-command'
-stderr 'Error: metric command in main: exit code exit status 127'
+stderr 'command failed'
 
 # Test with a command that succeeds but returns non-numeric output
 ! exec ratchet --lt main 'echo "not a number"'
