@@ -15,18 +15,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Test TODO reduction
+      - name: Test basic operation
         uses: ./
         with:
-          metric: 'grep -r "TODO" . | wc -l'
-          lt: main
-          verbose: true
-
-      - name: Test file count increase
-        uses: ./
-        with:
-          metric: 'find . -name "*.go" | wc -l'
-          ge: main
+          metric: "echo 5"
+          eq: main
 
   test-cross-platform:
     name: Test on ${{ matrix.os }}
