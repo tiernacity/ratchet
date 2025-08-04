@@ -148,8 +148,11 @@ runs:
     - name: Run ratchet
       shell: bash
       run: |
-        # Convert inputs to JSON config
-        CONFIG='${{ toJSON(inputs) }}'
+        # Convert inputs to JSON config using heredoc to avoid shell escaping issues
+        CONFIG=$(cat <<'EOF'
+        ${{ toJSON(inputs) }}
+        EOF
+        )
         
         # Run based on mode
         if [[ "${{ steps.mode.outputs.mode }}" == "source" ]]; then
