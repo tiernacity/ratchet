@@ -25,6 +25,14 @@ type Config struct {
 	LessThanOrEqual    bool `mapstructure:"less-than-or-equal"`
 	LessThan           bool `mapstructure:"less-than"`
 
+	// Short name aliases for operators (for GitHub Action and convenience)
+	// These contain the branch name as their value
+	Gt string `mapstructure:"gt"`
+	Ge string `mapstructure:"ge"`
+	Eq string `mapstructure:"eq"`
+	Le string `mapstructure:"le"`
+	Lt string `mapstructure:"lt"`
+
 	// Other settings
 	ConfigFile string `mapstructure:"-"`
 	Verbose    bool   `mapstructure:"verbose"`
@@ -84,6 +92,7 @@ func (op ComparisonOperator) HumanString() string {
 func (c *Config) Normalize() error {
 	count := 0
 
+	// Check long form flags
 	if c.GreaterThan {
 		c.Operator = OpGreaterThan
 		count++
@@ -102,6 +111,33 @@ func (c *Config) Normalize() error {
 	}
 	if c.LessThan {
 		c.Operator = OpLessThan
+		count++
+	}
+
+	// Check short form flags
+	if c.Gt != "" {
+		c.Operator = OpGreaterThan
+		c.BaseBranch = c.Gt
+		count++
+	}
+	if c.Ge != "" {
+		c.Operator = OpGreaterThanOrEqual
+		c.BaseBranch = c.Ge
+		count++
+	}
+	if c.Eq != "" {
+		c.Operator = OpEqual
+		c.BaseBranch = c.Eq
+		count++
+	}
+	if c.Le != "" {
+		c.Operator = OpLessThanOrEqual
+		c.BaseBranch = c.Le
+		count++
+	}
+	if c.Lt != "" {
+		c.Operator = OpLessThan
+		c.BaseBranch = c.Lt
 		count++
 	}
 
