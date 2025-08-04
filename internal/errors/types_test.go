@@ -25,7 +25,7 @@ func TestValidationError(t *testing.T) {
 		Message: "cannot be empty",
 	}
 
-	assert.Equal(t, "validation error: metric-cmd: cannot be empty", err.Error())
+	assert.Equal(t, "cannot be empty", err.Error())
 	assert.Equal(t, 2, err.ExitCode())
 }
 
@@ -36,7 +36,7 @@ func TestGitError(t *testing.T) {
 		Wrapped:   underlying,
 	}
 
-	assert.Equal(t, "git checkout: branch not found", err.Error())
+	assert.Equal(t, "branch not found", err.Error())
 	assert.Equal(t, 2, err.ExitCode())
 	assert.Equal(t, underlying, err.Unwrap())
 }

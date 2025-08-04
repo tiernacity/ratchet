@@ -15,6 +15,9 @@ type Reporter interface {
 	// Success reports a successful metric test
 	Success(current, base float64, operator, branch string)
 
+	// Failure reports a failed metric test
+	Failure(current, base float64, operator, branch string)
+
 	// Error reports an error message
 	Error(message string)
 

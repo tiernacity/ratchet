@@ -98,14 +98,14 @@ func (o *orchestrator) runNoComparison(ctx context.Context, cfg *config.Config) 
 	// Run pre-command if specified
 	if cfg.Pre != "" {
 		if _, err := o.executor.Execute(ctx, ".", cfg.Pre); err != nil {
-			return errors.NewPhaseErrorFromExecutorError("pre-command", "HEAD", err)
+			return errors.NewPhaseErrorFromExecutorError("pre", "HEAD", cfg.Pre, err)
 		}
 	}
 
 	// Run metric command
 	output, err := o.executor.Execute(ctx, ".", cfg.Metric)
 	if err != nil {
-		return errors.NewPhaseErrorFromExecutorError("metric command", "HEAD", err)
+		return errors.NewPhaseErrorFromExecutorError("metric", "HEAD", cfg.Metric, err)
 	}
 
 	// Parse metric
@@ -117,7 +117,7 @@ func (o *orchestrator) runNoComparison(ctx context.Context, cfg *config.Config) 
 	// Run post-command if specified
 	if cfg.Post != "" {
 		if _, err := o.executor.Execute(ctx, ".", cfg.Post); err != nil {
-			return errors.NewPhaseErrorFromExecutorError("post-command", "HEAD", err)
+			return errors.NewPhaseErrorFromExecutorError("post", "HEAD", cfg.Post, err)
 		}
 	}
 
@@ -132,7 +132,7 @@ func (o *orchestrator) runMetricSequence(ctx context.Context, cfg *config.Config
 	if cfg.Pre != "" {
 		o.reporter.UpdateBranch(branchName, "pre", false)
 		if _, err := o.executor.Execute(ctx, dir, cfg.Pre); err != nil {
-			return 0, errors.NewPhaseErrorFromExecutorError("pre-command", branchName, err)
+			return 0, errors.NewPhaseErrorFromExecutorError("pre", branchName, cfg.Pre, err)
 		}
 		o.reporter.UpdateBranch(branchName, "pre", true)
 	}
@@ -141,7 +141,7 @@ func (o *orchestrator) runMetricSequence(ctx context.Context, cfg *config.Config
 	o.reporter.UpdateBranch(branchName, "metric", false)
 	output, err := o.executor.Execute(ctx, dir, cfg.Metric)
 	if err != nil {
-		return 0, errors.NewPhaseErrorFromExecutorError("metric command", branchName, err)
+		return 0, errors.NewPhaseErrorFromExecutorError("metric", branchName, cfg.Metric, err)
 	}
 
 	// Parse metric
@@ -155,7 +155,7 @@ func (o *orchestrator) runMetricSequence(ctx context.Context, cfg *config.Config
 	if cfg.Post != "" {
 		o.reporter.UpdateBranch(branchName, "post", false)
 		if _, err := o.executor.Execute(ctx, dir, cfg.Post); err != nil {
-			return 0, errors.NewPhaseErrorFromExecutorError("post-command", branchName, err)
+			return 0, errors.NewPhaseErrorFromExecutorError("post", branchName, cfg.Post, err)
 		}
 		o.reporter.UpdateBranch(branchName, "post", true)
 	}

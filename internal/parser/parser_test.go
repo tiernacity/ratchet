@@ -221,7 +221,7 @@ func TestParser_ErrorMessages(t *testing.T) {
 		{
 			name:       "empty output",
 			output:     "",
-			wantErrMsg: "invalid metric output '': output is empty",
+			wantErrMsg: "no metric output provided",
 		},
 		{
 			name:       "no numbers",

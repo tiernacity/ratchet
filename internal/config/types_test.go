@@ -85,7 +85,7 @@ func TestConfig_Normalize(t *testing.T) {
 				LessThan:    true,
 			},
 			wantErr: true,
-			errMsg:  "validation error: operator: multiple comparison operators specified",
+			errMsg:  "multiple comparison operators specified",
 		},
 		{
 			name: "no operator - valid for no-comparison mode",
@@ -104,7 +104,7 @@ func TestConfig_Normalize(t *testing.T) {
 				LessThan:           true,
 			},
 			wantErr: true,
-			errMsg:  "validation error: operator: multiple comparison operators specified",
+			errMsg:  "multiple comparison operators specified",
 		},
 	}
 
@@ -144,7 +144,7 @@ func TestConfig_Validate(t *testing.T) {
 				Operator:   OpGreaterThan,
 			},
 			wantErr: true,
-			errMsg:  "validation error: metric: metric command is required",
+			errMsg:  "metric command is required",
 		},
 		{
 			name: "missing base branch with comparison operator",
@@ -153,7 +153,7 @@ func TestConfig_Validate(t *testing.T) {
 				Operator: OpGreaterThan,
 			},
 			wantErr: true,
-			errMsg:  "validation error: base-branch: base branch cannot be empty when using comparison operator",
+			errMsg:  "base branch cannot be empty when using comparison operator",
 		},
 		{
 			name: "no-comparison mode valid",
@@ -198,5 +198,5 @@ func TestConfig_Validate(t *testing.T) {
 
 func TestValidationError_Error(t *testing.T) {
 	err := errors.NewValidationError("test-field", "test message")
-	assert.Equal(t, "validation error: test-field: test message", err.Error())
+	assert.Equal(t, "test message", err.Error())
 }

@@ -49,7 +49,7 @@ go install github.com/tiernacity/ratchet/cmd/ratchet@latest
 ### Basic Usage
 
 You must supply a metric command. The command must output (on stdout) a
-single line which can be parsed as a number.
+single line which somewhere contains a single number.
 
 ```bash
 # Report a count of TODO comments to stdout

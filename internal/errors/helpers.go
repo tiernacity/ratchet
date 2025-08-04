@@ -52,17 +52,23 @@ func NewCancelledError() *CancelledError {
 	return &CancelledError{}
 }
 
+// NewExitError creates an exit error with the specified code
+func NewExitError(code int) *ExitError {
+	return &ExitError{Code: code}
+}
+
 // NewPhaseError creates a phase execution error with context
-func NewPhaseError(phase, branch, reason string) *PhaseError {
+func NewPhaseError(phase, branch, command, reason string) *PhaseError {
 	return &PhaseError{
-		Phase:  phase,
-		Branch: branch,
-		Reason: reason,
+		Phase:   phase,
+		Branch:  branch,
+		Command: command,
+		Reason:  reason,
 	}
 }
 
 // NewPhaseErrorFromExecutorError creates a phase error from an executor error
-func NewPhaseErrorFromExecutorError(phase, branch string, err error) RatchetError {
+func NewPhaseErrorFromExecutorError(phase, branch, command string, err error) RatchetError {
 	if err == nil {
 		return nil
 	}
@@ -77,7 +83,7 @@ func NewPhaseErrorFromExecutorError(phase, branch string, err error) RatchetErro
 
 	// Extract concise reason from error
 	reason := extractConciseReason(err)
-	return NewPhaseError(phase, branch, reason)
+	return NewPhaseError(phase, branch, command, reason)
 }
 
 // extractConciseReason extracts a concise reason from command execution errors using proper error types
@@ -94,18 +100,18 @@ func extractConciseReason(err error) string {
 			if status.Signaled() {
 				return "interrupted by signal " + status.Signal().String()
 			}
-			return "exit code " + exitErr.String()
+			return "command failed"
 		}
-		return "exit code " + exitErr.String()
+		return "command failed"
 	}
 
 	// Check for exec.Error (command couldn't be started)
 	var execErr *exec.Error
 	if errors.As(err, &execErr) {
 		if execErr.Err == exec.ErrNotFound {
-			return execErr.Name + " not found"
+			return "command '" + execErr.Name + "' not found"
 		}
-		return "failed to start " + execErr.Name + ": " + execErr.Err.Error()
+		return "failed to start '" + execErr.Name + "': " + execErr.Err.Error()
 	}
 
 	// Check for context cancellation

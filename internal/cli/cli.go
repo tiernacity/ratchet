@@ -4,6 +4,7 @@ package cli
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -152,8 +153,19 @@ func runRatchet(cmd *cobra.Command, args []string) error {
 
 	// Run the orchestrator
 	err = orch.Run(ctx, cfg)
-	if err != nil && errors.ShouldSuppressHelp(err) {
-		cmd.SilenceUsage = true
+	if err != nil {
+		// Handle MetricTestError specially - report via progress reporter and return with exit code 1
+		var metricErr *errors.MetricTestError
+		if stderrors.As(err, &metricErr) {
+			progressReporter.Failure(metricErr.Current, metricErr.Base, metricErr.Operator, metricErr.Branch)
+			cmd.SilenceUsage = true
+			// Use os.Exit instead of returning an error to avoid Cobra's error output
+			os.Exit(1)
+		}
+
+		if errors.ShouldSuppressHelp(err) {
+			cmd.SilenceUsage = true
+		}
 	}
 	return err
 }

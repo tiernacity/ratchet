@@ -131,6 +131,12 @@ func (c *consoleReporter) Success(current, base float64, operator, branch string
 		formatMetric(current), operator, branch, formatMetric(base))
 }
 
+// Failure reports a failed metric test
+func (c *consoleReporter) Failure(current, base float64, operator, branch string) {
+	_, _ = fmt.Fprintf(c.errOut, "Failure: HEAD metric (%s) is NOT %s %s (%s)\n",
+		formatMetric(current), operator, branch, formatMetric(base))
+}
+
 // Error reports an error message
 func (c *consoleReporter) Error(message string) {
 	_, _ = fmt.Fprintf(c.errOut, "Error: %s\n", message)
