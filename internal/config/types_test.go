@@ -60,29 +60,29 @@ func TestConfig_Normalize(t *testing.T) {
 		{
 			name: "single operator - greater than",
 			config: Config{
-				GreaterThan: true,
+				GreaterThan: "main",
 			},
 			want: OpGreaterThan,
 		},
 		{
 			name: "single operator - less than",
 			config: Config{
-				LessThan: true,
+				LessThan: "main",
 			},
 			want: OpLessThan,
 		},
 		{
 			name: "single operator - equal",
 			config: Config{
-				Equal: true,
+				Equal: "main",
 			},
 			want: OpEqual,
 		},
 		{
 			name: "multiple operators",
 			config: Config{
-				GreaterThan: true,
-				LessThan:    true,
+				GreaterThan: "main",
+				LessThan:    "main",
 			},
 			wantErr: true,
 			errMsg:  "multiple comparison operators specified",
@@ -97,11 +97,11 @@ func TestConfig_Normalize(t *testing.T) {
 		{
 			name: "all operators set",
 			config: Config{
-				GreaterThan:        true,
-				GreaterThanOrEqual: true,
-				Equal:              true,
-				LessThanOrEqual:    true,
-				LessThan:           true,
+				GreaterThan:        "main",
+				GreaterThanOrEqual: "main",
+				Equal:              "main",
+				LessThanOrEqual:    "main",
+				LessThan:           "main",
 			},
 			wantErr: true,
 			errMsg:  "multiple comparison operators specified",

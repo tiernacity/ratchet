@@ -112,9 +112,8 @@ release:
     - name: Run Ratchet
       uses: tiernacity/ratchet@{{ .Tag }}
       with:
-        metric-cmd: 'find . -name "*.go" | wc -l'
-        operator: '>='
-        base-branch: 'main'
+        metric: 'find . -name "*.go" | wc -l'
+        ge: 'main'
     ```
   footer: |
     **Full Changelog**: https://github.com/tiernacity/ratchet/compare/{{ .PreviousTag }}...{{ .Tag }}
