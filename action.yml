@@ -75,9 +75,10 @@ runs:
     
     - name: Setup Go (source mode)
       if: steps.mode.outputs.mode == 'source'
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version-file: ${{ github.action_path }}/go.mod
+        cache: false
     
     - name: Download ratchet (binary mode)
       if: steps.mode.outputs.mode == 'binary'
