@@ -18,7 +18,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'
-        cache: true
+        cache: false
     
     
     - name: Download dependencies
@@ -57,7 +57,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'
-        cache: true
+        cache: false
     
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v6
@@ -85,7 +85,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'
-        cache: true
+        cache: false
     
     - name: Build
       run: go build -o bin/${{ matrix.binary_name }} ./cmd/ratchet
